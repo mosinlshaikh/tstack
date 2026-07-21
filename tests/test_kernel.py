@@ -1,10 +1,12 @@
 import json
 import sqlite3
+import time
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, recover_stuck_tasks, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -44,6 +46,26 @@ def test_kernel_rejects_approval_replay(tmp_path) -> None:
     approve_task(tmp_path, task.task_id, actor="Mosin", max_uses=1)
     run_task(tmp_path, task.task_id)
     with pytest.raises(ValueError, match="maximum uses"):
+        run_task(tmp_path, task.task_id)
+
+
+def test_kernel_rejects_revoked_approval(tmp_path) -> None:
+    init_workspace(tmp_path)
+    task = submit_task(tmp_path, capability="filesystem.write", target="note.txt", content="after")
+    approval = approve_task(tmp_path, task.task_id, actor="Mosin")
+    revocation = revoke_approval(tmp_path, approval.approval_id, actor="Mosin", reason="Changed mind")
+    assert revocation.schema == "tstack-approval-revocation/v1"
+    with pytest.raises(ValueError, match="revoked"):
+        run_task(tmp_path, task.task_id)
+
+
+def test_kernel_rejects_expired_approval(tmp_path) -> None:
+    init_workspace(tmp_path)
+    task = submit_task(tmp_path, capability="filesystem.write", target="note.txt", content="after")
+    expires = (datetime.now(timezone.utc) + timedelta(milliseconds=200)).isoformat()
+    approve_task(tmp_path, task.task_id, actor="Mosin", expires_at=expires)
+    time.sleep(0.3)
+    with pytest.raises(ValueError, match="expired"):
         run_task(tmp_path, task.task_id)
 
 
@@ -207,6 +229,18 @@ def test_kernel_cli_queue_events_and_cancel(tmp_path, capsys) -> None:
     assert main(["task", "cancel", second["task_id"], "--workspace", str(workspace), "--reason", "not needed"]) == 0
     cancelled = json.loads(capsys.readouterr().out)
     assert cancelled["state"] == "CANCELLED"
+
+
+def test_kernel_cli_revoke_approval(tmp_path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    init_workspace(workspace)
+    task = submit_task(workspace, capability="filesystem.write", target="note.txt", content="hello")
+    assert main(["kernel-approval", "approve", task.task_id, "--workspace", str(workspace), "--actor", "Mosin"]) == 0
+    approval = json.loads(capsys.readouterr().out)
+    assert main(["kernel-approval", "revoke", approval["approval_id"], "--workspace", str(workspace), "--actor", "Mosin", "--reason", "No longer needed"]) == 0
+    revocation = json.loads(capsys.readouterr().out)
+    assert revocation["schema"] == "tstack-approval-revocation/v1"
+    assert revocation["approval_id"] == approval["approval_id"]
 
 
 def test_daemon_cli_start_and_status(tmp_path, capsys) -> None:

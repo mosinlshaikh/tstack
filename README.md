@@ -130,6 +130,7 @@ tstack daemon status
 tstack daemon recover --policy fail
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
+tstack kernel-approval revoke APPROVAL_ID --actor Mosin --reason "No longer approved"
 tstack task queue TASK_ID
 tstack task run-next
 tstack task run TASK_ID

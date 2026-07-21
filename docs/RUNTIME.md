@@ -11,6 +11,7 @@ tstack daemon status
 tstack daemon recover --policy fail
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
+tstack kernel-approval revoke APPROVAL_ID --actor Mosin --reason "No longer approved"
 tstack task queue TASK_ID
 tstack task run-next
 tstack task run TASK_ID
@@ -36,6 +37,8 @@ tstack kernel-rollback apply TASK_ID
 - Same-process bounded worker pool simulation over queued tasks
 - Signed approval records
 - Approval replay prevention through `max_uses`
+- Approval expiry enforcement
+- Approval revocation
 - Approved `filesystem.write` execution
 - Snapshot before write
 - Audit hash-chain records

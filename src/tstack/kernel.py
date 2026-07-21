@@ -68,6 +68,16 @@ class SignedApproval:
 
 
 @dataclass(frozen=True)
+class ApprovalRevocation:
+    schema: str
+    approval_id: str
+    task_id: str
+    actor: str
+    reason: str
+    timestamp_utc: str
+
+
+@dataclass(frozen=True)
 class KernelRunResult:
     schema: str
     task_id: str
@@ -236,6 +246,13 @@ def init_workspace(path: Path) -> KernelWorkspace:
               signature text not null,
               uses integer not null default 0
             );
+            create table if not exists approval_revocations (
+              approval_id text primary key,
+              task_id text not null,
+              actor text not null,
+              reason text not null,
+              timestamp_utc text not null
+            );
             create table if not exists audit_records (
               id integer primary key autoincrement,
               task_id text not null,
@@ -296,6 +313,17 @@ def approve_task(root_path: Path, task_id: str, *, actor: str, mode: str = "ONCE
         raise ValueError("unsupported approval mode")
     if not actor.strip():
         raise ValueError("approval actor is required")
+    if max_uses <= 0:
+        raise ValueError("approval max_uses must be positive")
+    if expires_at is not None:
+        try:
+            expires = datetime.fromisoformat(expires_at)
+        except ValueError as exc:
+            raise ValueError("approval expires_at must be ISO-8601") from exc
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires <= datetime.now(timezone.utc):
+            raise ValueError("approval expiry must be in the future")
     nonce = secrets.token_hex(16)
     timestamp = _now()
     approval_id = "APP-" + _sha(f"{task_id}:{task.request_hash}:{nonce}")[:16]
@@ -318,6 +346,25 @@ def approve_task(root_path: Path, task_id: str, *, actor: str, mode: str = "ONCE
             (approval.approval_id, approval.task_id, approval.request_hash, approval.actor, approval.mode, approval.expires_at, approval.max_uses, approval.nonce, approval.timestamp_utc, approval.signature),
         )
     return approval
+
+
+def revoke_approval(root_path: Path, approval_id: str, *, actor: str, reason: str) -> ApprovalRevocation:
+    root = root_path.expanduser().resolve()
+    if not actor.strip():
+        raise ValueError("revocation actor is required")
+    if not reason.strip():
+        raise ValueError("revocation reason is required")
+    with _connect(root) as db:
+        row = db.execute("select task_id from approvals where approval_id = ?", (approval_id,)).fetchone()
+        if row is None:
+            raise ValueError("approval not found")
+        revocation = ApprovalRevocation("tstack-approval-revocation/v1", approval_id, row[0], actor.strip(), reason.strip(), _now())
+        db.execute(
+            "insert or replace into approval_revocations(approval_id, task_id, actor, reason, timestamp_utc) values (?, ?, ?, ?, ?)",
+            (revocation.approval_id, revocation.task_id, revocation.actor, revocation.reason, revocation.timestamp_utc),
+        )
+        _record_event(db, revocation.task_id, "approval_revoked", get_task(root, revocation.task_id).state, reason.strip())
+    return revocation
 
 
 def get_task(root_path: Path, task_id: str) -> KernelTask:
@@ -448,6 +495,16 @@ def _verified_approval(root: Path, task: KernelTask) -> SignedApproval:
         raise ValueError("approval mode denies execution")
     if int(row[10]) >= approval.max_uses:
         raise ValueError("approval maximum uses exceeded")
+    if approval.expires_at is not None:
+        expires = datetime.fromisoformat(approval.expires_at)
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires <= datetime.now(timezone.utc):
+            raise ValueError("approval expired")
+    with _connect(root) as db:
+        revoked = db.execute("select 1 from approval_revocations where approval_id = ?", (approval.approval_id,)).fetchone()
+    if revoked is not None:
+        raise ValueError("approval revoked")
     return approval
 
 
