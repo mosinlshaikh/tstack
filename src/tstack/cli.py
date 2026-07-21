@@ -28,6 +28,7 @@ from tstack.release_orchestrator import evaluate_release, release_json, release_
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.reproducibility import compare_builds, receipt_json, repro_json, verify_attestation
 from tstack.runtime import approve_runtime_request, create_audit_event, create_runtime_request, runtime_json, runtime_markdown
+from tstack.sandbox import default_sandbox_policy, load_sandbox_policy, plan_sandbox_command, sandbox_plan_json, sandbox_plan_markdown, sandbox_policy_json
 from tstack.scanner import report_json, report_markdown, scan_project
 from tstack.ssh import create_ssh_policy, load_ssh_policy, plan_ssh_command, ssh_plan_json, ssh_plan_markdown
 from tstack.supplychain import build_manifest, checksums_text, manifest_json, sbom_json, verify_manifest
@@ -213,6 +214,20 @@ def _handle_audit_log(args: argparse.Namespace) -> int:
         _write_output(audit_log_json(result) if args.format == "json" else audit_log_markdown(result), args.output)
         return 0 if result.valid else 18
     raise ValueError(f"unknown audit-log command: {args.audit_log_command}")
+
+
+def _handle_sandbox(args: argparse.Namespace) -> int:
+    if args.sandbox_command == "init":
+        policy = default_sandbox_policy(Path(args.workspace))
+        _write_output(sandbox_policy_json(policy), args.output)
+        return 0
+    if args.sandbox_command == "plan":
+        policy = load_sandbox_policy(Path(args.policy))
+        command = tuple(part for part in args.command if part != "--")
+        plan = plan_sandbox_command(policy, command, cwd=Path(args.cwd) if args.cwd else None, write=args.write, network=args.network)
+        _write_output(sandbox_plan_json(plan) if args.format == "json" else sandbox_plan_markdown(plan), args.output)
+        return 0 if not plan.blockers else 19
+    raise ValueError(f"unknown sandbox command: {args.sandbox_command}")
 
 
 def _handle_desktop(args: argparse.Namespace) -> int:
@@ -653,6 +668,22 @@ def build_parser() -> argparse.ArgumentParser:
     audit_log_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     audit_log_item.add_argument("--output", "-o")
     audit_log_item.set_defaults(handler=_handle_audit_log)
+
+    item = subparsers.add_parser("sandbox", help="Create sandbox policies and safe subprocess plans")
+    sandbox_subparsers = item.add_subparsers(dest="sandbox_command", required=True)
+    sandbox_item = sandbox_subparsers.add_parser("init", help="Create a default sandbox policy")
+    sandbox_item.add_argument("workspace", nargs="?", default=".")
+    sandbox_item.add_argument("--output", "-o", default="sandbox-policy.json")
+    sandbox_item.set_defaults(handler=_handle_sandbox)
+    sandbox_item = sandbox_subparsers.add_parser("plan", help="Plan a sandboxed command without executing it")
+    sandbox_item.add_argument("policy")
+    sandbox_item.add_argument("--cwd")
+    sandbox_item.add_argument("--write", action="store_true")
+    sandbox_item.add_argument("--network", action="store_true")
+    sandbox_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    sandbox_item.add_argument("--output", "-o")
+    sandbox_item.add_argument("--cmd", dest="command", nargs=argparse.REMAINDER, required=True)
+    sandbox_item.set_defaults(handler=_handle_sandbox)
 
     item = subparsers.add_parser("desktop", help="Inspect local-first desktop Agentic OS blueprint")
     desktop_subparsers = item.add_subparsers(dest="desktop_command", required=True)

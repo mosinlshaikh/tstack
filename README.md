@@ -119,6 +119,13 @@ tstack audit-log append .tstack/audit.jsonl event.json
 tstack audit-log verify .tstack/audit.jsonl
 ```
 
+Sandbox planning:
+
+```bash
+tstack sandbox init . --output sandbox-policy.json
+tstack sandbox plan sandbox-policy.json --format json --cmd python -m pytest
+```
+
 ## Local Desktop OS
 
 TStack includes a local-first desktop Agentic OS blueprint for file, desktop, browser, code, voice, permission, audit, and rollback capabilities without external APIs by default.
