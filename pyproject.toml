@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ttrl-tstack"
+version = "0.1.0"
+description = "TTRL's evidence-driven software engineering workflow CLI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary until a public license is selected" }
+authors = [
+  { name = "T Technology Research Lab" }
+]
+keywords = ["software-engineering", "ai-workflows", "qa", "security", "release"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]
+dependencies = []
+
+[project.scripts]
+tstack = "tstack.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tstack = ["workflows/*.md"]
