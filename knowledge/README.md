@@ -1,8 +1,25 @@
 # TStack Knowledge Framework
 
-The `knowledge/` directory contains versioned engineering knowledge packs used by TStack's future knowledge, language, and decision systems.
+The `knowledge/` directory contains versioned engineering knowledge packs used by TStack's knowledge, language, and decision systems.
 
 Knowledge packs are not a dump of model internals. They are curated, reviewable engineering materials that can be indexed, tested, and linked to project evidence.
+
+## Current Coverage
+
+TStack currently includes **55 programming language packs**. Every language pack includes:
+
+- `overview`
+- `security`
+- `performance`
+- `testing`
+- `production`
+
+Check coverage with:
+
+```bash
+tstack knowledge stats
+tstack knowledge validate
+```
 
 ## Goals
 
@@ -14,28 +31,24 @@ Knowledge packs are not a dump of model internals. They are curated, reviewable 
 
 ## Directory Model
 
-Planned structure:
-
 ```text
 knowledge/
-├── README.md
-├── index.json
-├── languages/
-├── frameworks/
-├── architecture/
-├── security/
-├── databases/
-├── devops/
-├── ai/
-├── testing/
-└── examples/
+|-- README.md
+|-- index.json
+|-- languages/
+|-- frameworks/
+|-- architecture/
+|-- security/
+|-- databases/
+|-- devops/
+|-- ai/
+|-- testing/
+`-- examples/
 ```
-
-The initial commit creates the framework and index. Individual packs should be added in focused follow-up changes.
 
 ## Knowledge Pack Standard
 
-Each pack should define:
+Each pack must define:
 
 - Pack id.
 - Pack title.
@@ -45,6 +58,7 @@ Each pack should define:
 - Intended audience.
 - Limitations.
 - Review status.
+- Quality gates.
 
 ## Content Rules
 
@@ -68,19 +82,13 @@ Before a pack becomes stable, it should have:
 - Testing guidance where applicable.
 - Production guidance where applicable.
 - Index metadata.
+- Validation through `tstack knowledge validate`.
 
 ## Roadmap
 
-Initial planned packs:
+Next knowledge milestones:
 
-- Python.
-- Go.
-- Rust.
-- Java.
-- Kotlin.
-- JavaScript.
-- TypeScript.
-- SQL.
-- DevOps foundations.
-- Security foundations.
-- Architecture patterns.
+- Promote high-value language packs from `draft` to `review`.
+- Add framework packs for Python, JavaScript/TypeScript, Java/Kotlin, Go, and Rust ecosystems.
+- Add architecture, security, database, DevOps, and AI engineering packs.
+- Link knowledge packs into the Engineering Knowledge Graph.
