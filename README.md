@@ -119,6 +119,17 @@ tstack audit-log append .tstack/audit.jsonl event.json
 tstack audit-log verify .tstack/audit.jsonl
 ```
 
+SQLite Runtime Vertical Slice:
+
+```bash
+tstack workspace init .
+tstack task submit --target note.txt --content "hello"
+tstack kernel-approval approve TASK_ID --actor Mosin
+tstack task run TASK_ID
+tstack kernel-audit verify
+tstack kernel-rollback apply TASK_ID
+```
+
 Sandbox planning:
 
 ```bash
@@ -317,7 +328,7 @@ tstack scan . --fail-on hold
 
 ## Status
 
-Current release stage: **0.17.0 alpha**.
+Current release stage: **0.18.0a1 experimental runtime-kernel branch**.
 
 ## License
 

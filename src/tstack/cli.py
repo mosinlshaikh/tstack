@@ -20,6 +20,7 @@ from tstack.environment import environment_json, environment_markdown, inspect_e
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.file_runtime import apply_file_transaction, file_transaction_json, file_transaction_markdown, undo_file_transaction
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
+from tstack.kernel import approve_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_tasks as kernel_list_tasks, rollback_task, run_task, submit_task, verify_audit_chain
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
 from tstack.mastery import level_10_mastery_profile, mastery_json, mastery_markdown
@@ -234,6 +235,58 @@ def _handle_sandbox(args: argparse.Namespace) -> int:
         _write_output(sandbox_result_json(result) if args.format == "json" else sandbox_result_markdown(result), args.output)
         return 0 if result.executed and result.exit_code == 0 and not result.timed_out else 20
     raise ValueError(f"unknown sandbox command: {args.sandbox_command}")
+
+
+def _handle_workspace(args: argparse.Namespace) -> int:
+    if args.workspace_command == "init":
+        workspace = kernel_init_workspace(Path(args.path))
+        _write_output(kernel_json(workspace), args.output)
+        return 0
+    raise ValueError(f"unknown workspace command: {args.workspace_command}")
+
+
+def _handle_task(args: argparse.Namespace) -> int:
+    if args.task_command == "submit":
+        task = submit_task(Path(args.workspace), capability=args.capability, target=args.target, content=args.content)
+        _write_output(kernel_json(task), args.output)
+        return 0
+    if args.task_command == "list":
+        _write_output(kernel_json(kernel_list_tasks(Path(args.workspace))), args.output)
+        return 0
+    if args.task_command == "show":
+        _write_output(kernel_json(get_task(Path(args.workspace), args.task_id)), args.output)
+        return 0
+    if args.task_command == "run":
+        result = run_task(Path(args.workspace), args.task_id)
+        _write_output(kernel_json(result), args.output)
+        return 0
+    if args.task_command == "cancel":
+        raise ValueError("task cancellation is not implemented in the vertical slice")
+    raise ValueError(f"unknown task command: {args.task_command}")
+
+
+def _handle_kernel_approval(args: argparse.Namespace) -> int:
+    if args.kernel_approval_command == "approve":
+        approval = approve_task(Path(args.workspace), args.task_id, actor=args.actor, mode=args.mode, max_uses=args.max_uses)
+        _write_output(kernel_json(approval), args.output)
+        return 0
+    raise ValueError(f"unknown kernel approval command: {args.kernel_approval_command}")
+
+
+def _handle_kernel_rollback(args: argparse.Namespace) -> int:
+    if args.kernel_rollback_command == "apply":
+        result = rollback_task(Path(args.workspace), args.task_id)
+        _write_output(kernel_json(result), args.output)
+        return 0
+    raise ValueError(f"unknown kernel rollback command: {args.kernel_rollback_command}")
+
+
+def _handle_kernel_audit(args: argparse.Namespace) -> int:
+    if args.kernel_audit_command == "verify":
+        valid = verify_audit_chain(Path(args.workspace))
+        _write_output(json.dumps({"schema": "tstack-kernel-audit-verification/v1", "valid": valid}, indent=2, sort_keys=True) + "\n", args.output)
+        return 0 if valid else 21
+    raise ValueError(f"unknown kernel audit command: {args.kernel_audit_command}")
 
 
 def _handle_desktop(args: argparse.Namespace) -> int:
@@ -701,6 +754,67 @@ def build_parser() -> argparse.ArgumentParser:
     sandbox_item.add_argument("--output", "-o")
     sandbox_item.add_argument("--cmd", dest="command", nargs=argparse.REMAINDER, required=True)
     sandbox_item.set_defaults(handler=_handle_sandbox)
+
+    item = subparsers.add_parser("workspace", help="Initialize SQLite-backed TStack workspaces")
+    workspace_subparsers = item.add_subparsers(dest="workspace_command", required=True)
+    workspace_item = workspace_subparsers.add_parser("init", help="Initialize runtime workspace state")
+    workspace_item.add_argument("path", nargs="?", default=".")
+    workspace_item.add_argument("--output", "-o")
+    workspace_item.set_defaults(handler=_handle_workspace)
+
+    item = subparsers.add_parser("task", help="Submit and run runtime kernel tasks")
+    task_subparsers = item.add_subparsers(dest="task_command", required=True)
+    task_item = task_subparsers.add_parser("submit", help="Submit a filesystem.write task")
+    task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--capability", default="filesystem.write")
+    task_item.add_argument("--target", required=True)
+    task_item.add_argument("--content", required=True)
+    task_item.add_argument("--output", "-o")
+    task_item.set_defaults(handler=_handle_task)
+    task_item = task_subparsers.add_parser("list", help="List runtime tasks")
+    task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--output", "-o")
+    task_item.set_defaults(handler=_handle_task)
+    task_item = task_subparsers.add_parser("show", help="Show one runtime task")
+    task_item.add_argument("task_id")
+    task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--output", "-o")
+    task_item.set_defaults(handler=_handle_task)
+    task_item = task_subparsers.add_parser("run", help="Run an approved runtime task")
+    task_item.add_argument("task_id")
+    task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--output", "-o")
+    task_item.set_defaults(handler=_handle_task)
+    task_item = task_subparsers.add_parser("cancel", help="Cancel a runtime task")
+    task_item.add_argument("task_id")
+    task_item.add_argument("--workspace", default=".")
+    task_item.set_defaults(handler=_handle_task)
+
+    item = subparsers.add_parser("kernel-approval", help="Approve runtime kernel tasks with signed approvals")
+    approval_subparsers = item.add_subparsers(dest="kernel_approval_command", required=True)
+    approval_item = approval_subparsers.add_parser("approve", help="Create a signed task approval")
+    approval_item.add_argument("task_id")
+    approval_item.add_argument("--workspace", default=".")
+    approval_item.add_argument("--actor", required=True)
+    approval_item.add_argument("--mode", default="ONCE")
+    approval_item.add_argument("--max-uses", type=int, default=1)
+    approval_item.add_argument("--output", "-o")
+    approval_item.set_defaults(handler=_handle_kernel_approval)
+
+    item = subparsers.add_parser("kernel-rollback", help="Rollback runtime kernel tasks")
+    rollback_subparsers = item.add_subparsers(dest="kernel_rollback_command", required=True)
+    rollback_item = rollback_subparsers.add_parser("apply", help="Apply rollback for a task")
+    rollback_item.add_argument("task_id")
+    rollback_item.add_argument("--workspace", default=".")
+    rollback_item.add_argument("--output", "-o")
+    rollback_item.set_defaults(handler=_handle_kernel_rollback)
+
+    item = subparsers.add_parser("kernel-audit", help="Verify runtime kernel audit chain")
+    audit_subparsers = item.add_subparsers(dest="kernel_audit_command", required=True)
+    audit_item = audit_subparsers.add_parser("verify", help="Verify SQLite audit hash chain")
+    audit_item.add_argument("--workspace", default=".")
+    audit_item.add_argument("--output", "-o")
+    audit_item.set_defaults(handler=_handle_kernel_audit)
 
     item = subparsers.add_parser("desktop", help="Inspect local-first desktop Agentic OS blueprint")
     desktop_subparsers = item.add_subparsers(dest="desktop_command", required=True)
