@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ttrl-tstack"
-version = "0.6.0"
-description = "TTRL evidence-driven engineering workflows, project audits, policy gates, and extensible rule plugins"
+version = "0.7.0"
+description = "TTRL evidence-driven engineering workflows, audits, policy gates, plugins, and supply-chain verification"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary until a public license is selected" }
 authors = [{ name = "T Technology Research Lab" }]
-keywords = ["software-engineering", "ai-workflows", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins"]
+keywords = ["software-engineering", "ai-workflows", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins", "sbom", "provenance"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
