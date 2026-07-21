@@ -75,6 +75,7 @@ Current contract:
 - `13`: SSH automation plan blocked by policy.
 - `14`: automation registry validation failure.
 - `15`: execution plan is blocked by approval, risk, or executor policy.
+- `16`: bug report found review or hold findings.
 
 ## Schema Versioning
 

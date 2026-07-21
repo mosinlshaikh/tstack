@@ -9,6 +9,7 @@ from tstack import __version__
 from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, agent_stats, agent_stats_json, agent_stats_markdown, build_agent_plan, build_orchestration_plan, failure_route_json, failure_route_markdown, get_agent, list_agents, orchestration_json, orchestration_markdown, route_failure, select_agents_for_goal
 from tstack.approval import approval_decision_json, approval_decision_markdown, approval_readiness_json, approval_readiness_markdown, approval_request_json, approval_request_markdown, create_approval_request, decide_approval, evaluate_readiness
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
+from tstack.bug import bug_report_json, bug_report_markdown, find_bugs
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
 from tstack.desktop import desktop_blueprint_json, desktop_blueprint_markdown
@@ -196,6 +197,14 @@ def _handle_file(args: argparse.Namespace) -> int:
         _write_output(organize_plan_json(plan) if args.format == "json" else organize_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown file command: {args.file_command}")
+
+
+def _handle_bug(args: argparse.Namespace) -> int:
+    if args.bug_command == "find":
+        report = find_bugs(Path(args.path), failure=args.failure, max_files=args.max_files, max_file_bytes=args.max_file_bytes)
+        _write_output(bug_report_json(report) if args.format == "json" else bug_report_markdown(report), args.output)
+        return 0 if report.verdict == "PASS" else 16
+    raise ValueError(f"unknown bug command: {args.bug_command}")
 
 
 def _handle_human(args: argparse.Namespace) -> int:
@@ -543,6 +552,16 @@ def build_parser() -> argparse.ArgumentParser:
     file_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     file_item.add_argument("--output", "-o")
     file_item.set_defaults(handler=_handle_file)
+    item = subparsers.add_parser("bug", help="Find bugs and route fix plans to responsible agents")
+    bug_subparsers = item.add_subparsers(dest="bug_command", required=True)
+    bug_item = bug_subparsers.add_parser("find", help="Create a bug report from scan findings and optional failure text")
+    bug_item.add_argument("path", nargs="?", default=".")
+    bug_item.add_argument("--failure")
+    bug_item.add_argument("--max-files", type=int, default=10000)
+    bug_item.add_argument("--max-file-bytes", type=int, default=1000000)
+    bug_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    bug_item.add_argument("--output", "-o")
+    bug_item.set_defaults(handler=_handle_bug)
     item = subparsers.add_parser("human", help="Parse human language and typo-tolerant user intent")
     human_subparsers = item.add_subparsers(dest="human_command", required=True)
     human_item = human_subparsers.add_parser("languages", help="List supported human language registry")

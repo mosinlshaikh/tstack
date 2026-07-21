@@ -126,6 +126,13 @@ tstack file inventory ~/Downloads --format json
 tstack file organize-plan ~/Downloads
 ```
 
+Bug Finder:
+
+```bash
+tstack bug find .
+tstack bug find . --failure "pytest failed assertion in test_app"
+```
+
 ## Human Language Understanding
 
 TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions. The current human-language registry tracks 100+ major languages and can be expanded over time.
