@@ -13,7 +13,7 @@ from tstack.container_platform import audit_platform, platform_json, platform_ma
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
 from tstack.desktop import desktop_blueprint_json, desktop_blueprint_markdown
 from tstack.executor import apply_execution, execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, execution_result_json, execution_result_markdown, plan_execution
-from tstack.file_agent import build_inventory, inventory_json, inventory_markdown
+from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
@@ -190,6 +190,10 @@ def _handle_file(args: argparse.Namespace) -> int:
     if args.file_command == "inventory":
         inventory = build_inventory(Path(args.path), max_files=args.max_files)
         _write_output(inventory_json(inventory) if args.format == "json" else inventory_markdown(inventory), args.output)
+        return 0
+    if args.file_command == "organize-plan":
+        plan = plan_organize(Path(args.path), strategy=args.strategy, max_files=args.max_files)
+        _write_output(organize_plan_json(plan) if args.format == "json" else organize_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown file command: {args.file_command}")
 
@@ -528,6 +532,13 @@ def build_parser() -> argparse.ArgumentParser:
     file_subparsers = item.add_subparsers(dest="file_command", required=True)
     file_item = file_subparsers.add_parser("inventory", help="Scan local files and detect duplicate content")
     file_item.add_argument("path", nargs="?", default=".")
+    file_item.add_argument("--max-files", type=int, default=5000)
+    file_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    file_item.add_argument("--output", "-o")
+    file_item.set_defaults(handler=_handle_file)
+    file_item = file_subparsers.add_parser("organize-plan", help="Plan safe file organization without moving files")
+    file_item.add_argument("path", nargs="?", default=".")
+    file_item.add_argument("--strategy", choices=("extension", "year"), default="extension")
     file_item.add_argument("--max-files", type=int, default=5000)
     file_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     file_item.add_argument("--output", "-o")

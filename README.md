@@ -123,6 +123,7 @@ File Manager Agent:
 ```bash
 tstack file inventory .
 tstack file inventory ~/Downloads --format json
+tstack file organize-plan ~/Downloads
 ```
 
 ## Human Language Understanding

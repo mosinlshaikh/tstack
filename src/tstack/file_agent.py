@@ -5,10 +5,12 @@ import hashlib
 import json
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 
 
 FILE_INVENTORY_SCHEMA = "tstack-file-inventory/v1"
+FILE_ORGANIZE_PLAN_SCHEMA = "tstack-file-organize-plan/v1"
 
 EXCLUDED_DIRS = {".git", "__pycache__", "node_modules", ".venv", "venv", "dist", "build", ".pytest_cache"}
 
@@ -37,6 +39,25 @@ class FileInventory:
     extensions: dict[str, int]
     duplicates: tuple[DuplicateGroup, ...]
     records: tuple[FileRecord, ...]
+    execution_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class FileMovePlan:
+    source: str
+    destination: str
+    reason: str
+    conflict: bool
+
+
+@dataclass(frozen=True)
+class FileOrganizePlan:
+    schema: str
+    root: str
+    strategy: str
+    moves_planned: int
+    conflicts: int
+    moves: tuple[FileMovePlan, ...]
     execution_allowed: bool = False
 
 
@@ -120,4 +141,61 @@ def inventory_markdown(inventory: FileInventory) -> str:
         lines.append("- none")
     for group in inventory.duplicates:
         lines.append(f"- `{group.sha256[:16]}` size={group.size}: {', '.join(group.paths)}")
+    return "\n".join(lines) + "\n"
+
+
+def plan_organize(root: Path, *, strategy: str = "extension", max_files: int = 5000) -> FileOrganizePlan:
+    if strategy not in {"extension", "year"}:
+        raise ValueError("organize strategy must be extension or year")
+    base = root.expanduser().resolve()
+    if not base.exists() or not base.is_dir():
+        raise ValueError(f"organize root must be an existing directory: {base}")
+    moves: list[FileMovePlan] = []
+    for path in _iter_files(base, max_files):
+        relative = path.relative_to(base)
+        if len(relative.parts) > 1:
+            continue
+        if strategy == "extension":
+            bucket = (path.suffix.lower().lstrip(".") or "no-extension").upper()
+            destination = Path(bucket) / path.name
+            reason = f"group by extension {path.suffix.lower() or '<none>'}"
+        else:
+            bucket = str(datetime.fromtimestamp(path.stat().st_mtime).year)
+            destination = Path(bucket) / path.name
+            reason = "group by modified year"
+        if destination == relative:
+            continue
+        moves.append(FileMovePlan(relative.as_posix(), destination.as_posix(), reason, (base / destination).exists()))
+    return FileOrganizePlan(
+        schema=FILE_ORGANIZE_PLAN_SCHEMA,
+        root=str(base),
+        strategy=strategy,
+        moves_planned=len(moves),
+        conflicts=sum(1 for item in moves if item.conflict),
+        moves=tuple(sorted(moves, key=lambda item: item.source)),
+    )
+
+
+def organize_plan_json(plan: FileOrganizePlan) -> str:
+    return json.dumps(asdict(plan), indent=2, sort_keys=True) + "\n"
+
+
+def organize_plan_markdown(plan: FileOrganizePlan) -> str:
+    lines = [
+        "# TStack File Organize Plan",
+        "",
+        f"- Root: `{plan.root}`",
+        f"- Strategy: `{plan.strategy}`",
+        f"- Moves planned: {plan.moves_planned}",
+        f"- Conflicts: {plan.conflicts}",
+        f"- Execution allowed: {'yes' if plan.execution_allowed else 'no'}",
+        "",
+        "## Planned Moves",
+        "",
+    ]
+    if not plan.moves:
+        lines.append("- none")
+    for item in plan.moves:
+        conflict = " conflict" if item.conflict else ""
+        lines.append(f"- `{item.source}` -> `{item.destination}` ({item.reason}{conflict})")
     return "\n".join(lines) + "\n"
