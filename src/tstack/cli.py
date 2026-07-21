@@ -9,19 +9,10 @@ from pathlib import Path
 
 from tstack import __version__
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
-from tstack.policy import (
-    baseline_json,
-    default_policy_json,
-    diff_json,
-    diff_markdown,
-    diff_report,
-    evaluate_policy,
-    load_baseline,
-    load_policy,
-    report_sarif,
-)
+from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.scanner import report_json, report_markdown, scan_project
+from tstack.supplychain import build_manifest, checksums_text, manifest_json, sbom_json, verify_manifest
 
 
 def _write_output(content: str, output: str | None) -> None:
@@ -103,18 +94,14 @@ def _handle_scan(args: argparse.Namespace) -> int:
 
 
 def _handle_baseline(args: argparse.Namespace) -> int:
-    report = _scan(args)
     destination = args.output or str(Path(args.path) / ".tstack" / "baseline.json")
-    _write_output(baseline_json(report), destination)
+    _write_output(baseline_json(_scan(args)), destination)
     return 0
 
 
 def _handle_diff(args: argparse.Namespace) -> int:
-    report = _scan(args)
-    baseline_path = Path(args.baseline).expanduser().resolve()
-    diff = diff_report(report, load_baseline(baseline_path))
-    content = diff_json(diff) if args.format == "json" else diff_markdown(diff)
-    _write_output(content, args.output)
+    diff = diff_report(_scan(args), load_baseline(Path(args.baseline).expanduser().resolve()))
+    _write_output(diff_json(diff) if args.format == "json" else diff_markdown(diff), args.output)
     return 4 if args.fail_on_new and diff.new else 0
 
 
@@ -130,9 +117,30 @@ def _handle_policy_init(args: argparse.Namespace) -> int:
 
 def _handle_fix(args: argparse.Namespace) -> int:
     result = apply_remediation(Path(args.path), dry_run=not args.apply, force=args.force)
-    content = remediation_json(result) if args.format == "json" else remediation_markdown(result)
-    _write_output(content, args.output)
+    _write_output(remediation_json(result) if args.format == "json" else remediation_markdown(result), args.output)
     return 0
+
+
+def _handle_sbom(args: argparse.Namespace) -> int:
+    _write_output(sbom_json(), args.output)
+    return 0
+
+
+def _handle_manifest(args: argparse.Namespace) -> int:
+    root = Path(args.path).expanduser().resolve()
+    manifest = build_manifest(root)
+    manifest_target = args.output or str(root / "manifest.json")
+    _write_output(manifest_json(manifest), manifest_target)
+    if args.checksums:
+        _write_output(checksums_text(manifest), str(root / "checksums.sha256"))
+    return 0
+
+
+def _handle_verify(args: argparse.Namespace) -> int:
+    result = verify_manifest(Path(args.path), Path(args.manifest) if args.manifest else None)
+    payload = json.dumps({"valid": result.valid, "checked": result.checked, "missing": result.missing, "mismatched": result.mismatched}, indent=2) + "\n"
+    _write_output(payload, args.output)
+    return 0 if result.valid else 5
 
 
 def _add_scan_limits(parser: argparse.ArgumentParser) -> None:
@@ -146,66 +154,30 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    list_parser = subparsers.add_parser("list", help="List available workflows")
-    list_parser.set_defaults(handler=_handle_list)
+    item = subparsers.add_parser("list", help="List available workflows"); item.set_defaults(handler=_handle_list)
+    item = subparsers.add_parser("init", help="Initialize TStack in a project"); item.add_argument("path", nargs="?", default="."); item.add_argument("--force", action="store_true"); item.set_defaults(handler=_handle_init)
+    item = subparsers.add_parser("validate", help="Validate packaged workflow contracts"); item.add_argument("--json", action="store_true"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_validate)
 
-    init_parser = subparsers.add_parser("init", help="Initialize TStack in a project")
-    init_parser.add_argument("path", nargs="?", default=".")
-    init_parser.add_argument("--force", action="store_true", help="Replace generated TStack files")
-    init_parser.set_defaults(handler=_handle_init)
+    item = subparsers.add_parser("scan", help="Audit a project and enforce policy"); _add_scan_limits(item); item.add_argument("--format", choices=("markdown", "json", "sarif"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--policy"); item.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold"); item.set_defaults(handler=_handle_scan)
+    item = subparsers.add_parser("baseline", help="Create a finding baseline"); _add_scan_limits(item); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_baseline)
+    item = subparsers.add_parser("diff", help="Compare current findings with a baseline"); _add_scan_limits(item); item.add_argument("--baseline", required=True); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--fail-on-new", action="store_true"); item.set_defaults(handler=_handle_diff)
+    item = subparsers.add_parser("policy-init", help="Create a default project policy"); item.add_argument("path", nargs="?", default="."); item.add_argument("--force", action="store_true"); item.set_defaults(handler=_handle_policy_init)
+    item = subparsers.add_parser("fix", help="Plan or apply safe controls"); item.add_argument("path", nargs="?", default="."); item.add_argument("--apply", action="store_true"); item.add_argument("--force", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_fix)
 
-    validate_parser = subparsers.add_parser("validate", help="Validate packaged workflow contracts")
-    validate_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
-    validate_parser.add_argument("--output", "-o")
-    validate_parser.set_defaults(handler=_handle_validate)
-
-    scan_parser = subparsers.add_parser("scan", help="Audit a project and enforce policy")
-    _add_scan_limits(scan_parser)
-    scan_parser.add_argument("--format", choices=("markdown", "json", "sarif"), default="markdown")
-    scan_parser.add_argument("--output", "-o", help="Write the report to a file")
-    scan_parser.add_argument("--policy", help="Explicit policy JSON path")
-    scan_parser.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold")
-    scan_parser.set_defaults(handler=_handle_scan)
-
-    baseline_parser = subparsers.add_parser("baseline", help="Create a finding baseline from the current project")
-    _add_scan_limits(baseline_parser)
-    baseline_parser.add_argument("--output", "-o")
-    baseline_parser.set_defaults(handler=_handle_baseline)
-
-    diff_parser = subparsers.add_parser("diff", help="Compare current findings with a baseline")
-    _add_scan_limits(diff_parser)
-    diff_parser.add_argument("--baseline", required=True)
-    diff_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
-    diff_parser.add_argument("--output", "-o")
-    diff_parser.add_argument("--fail-on-new", action="store_true")
-    diff_parser.set_defaults(handler=_handle_diff)
-
-    policy_parser = subparsers.add_parser("policy-init", help="Create a default project policy")
-    policy_parser.add_argument("path", nargs="?", default=".")
-    policy_parser.add_argument("--force", action="store_true")
-    policy_parser.set_defaults(handler=_handle_policy_init)
-
-    fix_parser = subparsers.add_parser("fix", help="Plan or apply safe missing engineering controls")
-    fix_parser.add_argument("path", nargs="?", default=".")
-    fix_parser.add_argument("--apply", action="store_true", help="Write planned files; default is dry-run")
-    fix_parser.add_argument("--force", action="store_true", help="Allow replacement of files selected by the plan")
-    fix_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
-    fix_parser.add_argument("--output", "-o", help="Write plan/result to a file")
-    fix_parser.set_defaults(handler=_handle_fix)
+    item = subparsers.add_parser("sbom", help="Generate CycloneDX JSON SBOM for the active environment"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_sbom)
+    item = subparsers.add_parser("manifest", help="Create deterministic release artifact manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--output", "-o"); item.add_argument("--checksums", action="store_true"); item.set_defaults(handler=_handle_manifest)
+    item = subparsers.add_parser("verify", help="Verify artifacts against a release manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--manifest"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_verify)
 
     for workflow in WORKFLOWS:
-        workflow_parser = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow")
-        workflow_parser.add_argument("--output", "-o", help="Write the workflow to a file")
-        workflow_parser.set_defaults(handler=_handle_workflow, workflow=workflow)
+        item = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_workflow, workflow=workflow)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
+    parser = build_parser(); args = parser.parse_args(argv)
     try:
         return int(args.handler(args))
-    except (FileExistsError, FileNotFoundError, OSError, ValueError, json.JSONDecodeError) as exc:
+    except (FileExistsError, FileNotFoundError, OSError, ValueError, json.JSONDecodeError, KeyError) as exc:
         print(f"tstack: error: {exc}", file=sys.stderr)
         return 1
 
