@@ -20,7 +20,7 @@ from tstack.environment import environment_json, environment_markdown, inspect_e
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.file_runtime import apply_file_transaction, file_transaction_json, file_transaction_markdown, undo_file_transaction
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
-from tstack.kernel import approve_task, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, rollback_task, run_next_task, run_task, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, recover_stuck_tasks, rollback_task, run_next_task, run_task, start_daemon_foundation, submit_task, verify_audit_chain
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
 from tstack.mastery import level_10_mastery_profile, mastery_json, mastery_markdown
@@ -254,6 +254,10 @@ def _handle_daemon(args: argparse.Namespace) -> int:
         status = daemon_status(Path(args.workspace))
         _write_output(kernel_json(status), args.output)
         return 0 if status.database_exists and status.audit_chain_valid else 23
+    if args.daemon_command == "recover":
+        result = recover_stuck_tasks(Path(args.workspace), policy=args.policy)
+        _write_output(kernel_json(result), args.output)
+        return 0
     raise ValueError(f"unknown daemon command: {args.daemon_command}")
 
 
@@ -789,6 +793,11 @@ def build_parser() -> argparse.ArgumentParser:
     daemon_subparsers = item.add_subparsers(dest="daemon_command", required=True)
     daemon_item = daemon_subparsers.add_parser("start", help="Initialize local runtime state and report daemon foundation status")
     daemon_item.add_argument("--workspace", default=".")
+    daemon_item.add_argument("--output", "-o")
+    daemon_item.set_defaults(handler=_handle_daemon)
+    daemon_item = daemon_subparsers.add_parser("recover", help="Recover stale RUNNING tasks after restart")
+    daemon_item.add_argument("--workspace", default=".")
+    daemon_item.add_argument("--policy", choices=("fail", "requeue"), default="fail")
     daemon_item.add_argument("--output", "-o")
     daemon_item.set_defaults(handler=_handle_daemon)
     daemon_item = daemon_subparsers.add_parser("status", help="Report local runtime state, queue, and audit health")

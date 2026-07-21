@@ -1,9 +1,10 @@
 import json
+import sqlite3
 
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, rollback_task, run_next_task, run_task, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, recover_stuck_tasks, rollback_task, run_next_task, run_task, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -87,6 +88,34 @@ def test_daemon_status_reports_queue_and_audit_health(tmp_path) -> None:
     assert status.background_process_running is False
 
 
+def test_daemon_recovery_fails_stale_running_tasks(tmp_path) -> None:
+    init_workspace(tmp_path)
+    task = submit_task(tmp_path, capability="filesystem.write", target="stale.txt", content="stale")
+    db_path = tmp_path / ".tstack" / "state.db"
+    with sqlite3.connect(db_path) as db:
+        db.execute("update tasks set state = 'RUNNING' where task_id = ?", (task.task_id,))
+    result = recover_stuck_tasks(tmp_path, policy="fail")
+    assert result.schema == "tstack-kernel-recovery-result/v1"
+    assert result.recovered == 1
+    assert result.task_ids == (task.task_id,)
+    assert result.audit_hashes
+    assert get_task(tmp_path, task.task_id).state == "FAILED"
+    assert verify_audit_chain(tmp_path) is True
+    assert any(event.event_type == "state" and event.state == "FAILED" for event in list_events(tmp_path, task.task_id))
+
+
+def test_daemon_recovery_can_requeue_stale_running_tasks(tmp_path) -> None:
+    init_workspace(tmp_path)
+    task = submit_task(tmp_path, capability="filesystem.write", target="stale.txt", content="stale")
+    db_path = tmp_path / ".tstack" / "state.db"
+    with sqlite3.connect(db_path) as db:
+        db.execute("update tasks set state = 'RUNNING' where task_id = ?", (task.task_id,))
+    result = recover_stuck_tasks(tmp_path, policy="requeue")
+    assert result.recovered == 1
+    assert get_task(tmp_path, task.task_id).state == "QUEUED"
+    assert verify_audit_chain(tmp_path) is True
+
+
 def test_kernel_timeout_marks_task_failed(tmp_path) -> None:
     init_workspace(tmp_path)
     task = submit_task(tmp_path, capability="filesystem.write", target="note.txt", content="after")
@@ -162,3 +191,16 @@ def test_daemon_cli_start_and_status(tmp_path, capsys) -> None:
     status = json.loads(capsys.readouterr().out)
     assert status["database_exists"] is True
     assert status["audit_chain_valid"] is True
+
+
+def test_daemon_cli_recover(tmp_path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    init_workspace(workspace)
+    task = submit_task(workspace, capability="filesystem.write", target="stale.txt", content="stale")
+    with sqlite3.connect(workspace / ".tstack" / "state.db") as db:
+        db.execute("update tasks set state = 'RUNNING' where task_id = ?", (task.task_id,))
+    assert main(["daemon", "recover", "--workspace", str(workspace), "--policy", "fail"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-kernel-recovery-result/v1"
+    assert payload["recovered"] == 1
+    assert get_task(workspace, task.task_id).state == "FAILED"

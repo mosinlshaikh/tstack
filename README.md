@@ -125,6 +125,7 @@ SQLite Runtime Vertical Slice:
 tstack workspace init .
 tstack daemon start
 tstack daemon status
+tstack daemon recover --policy fail
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
 tstack task queue TASK_ID

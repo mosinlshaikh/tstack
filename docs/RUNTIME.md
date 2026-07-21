@@ -8,6 +8,7 @@ It currently supports:
 tstack workspace init .
 tstack daemon start
 tstack daemon status
+tstack daemon recover --policy fail
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
 tstack task queue TASK_ID
@@ -30,6 +31,7 @@ tstack kernel-rollback apply TASK_ID
 - Queue transition and run-next scheduler foundation
 - Cancellation for non-terminal tasks
 - Timeout failure path
+- Restart recovery for stale `RUNNING` tasks with `fail` or `requeue` policy
 - Signed approval records
 - Approval replay prevention through `max_uses`
 - Approved `filesystem.write` execution
@@ -41,6 +43,6 @@ tstack kernel-rollback apply TASK_ID
 
 - No background daemon process yet
 - No worker pool yet
-- No restart/resume worker recovery yet
+- Recovery is explicit via `tstack daemon recover`; it is not automatic until a daemon loop exists
 - Only `filesystem.write` is executable in this vertical slice
 - Signing is workspace-local HMAC, not asymmetric public-key approval

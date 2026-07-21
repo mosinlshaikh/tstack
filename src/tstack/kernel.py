@@ -113,6 +113,16 @@ class KernelDaemonStatus:
     limitations: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class KernelRecoveryResult:
+    schema: str
+    workspace: str
+    policy: str
+    recovered: int
+    task_ids: tuple[str, ...]
+    audit_hashes: tuple[str, ...]
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -363,6 +373,25 @@ def daemon_status(root_path: Path) -> KernelDaemonStatus:
 def start_daemon_foundation(root_path: Path) -> KernelDaemonStatus:
     init_workspace(root_path)
     return daemon_status(root_path)
+
+
+def recover_stuck_tasks(root_path: Path, *, policy: str = "fail") -> KernelRecoveryResult:
+    if policy not in {"fail", "requeue"}:
+        raise ValueError("recovery policy must be fail or requeue")
+    root = root_path.expanduser().resolve()
+    with _connect(root) as db:
+        rows = db.execute("select task_id from tasks where state = ? order by updated_at, task_id", ("RUNNING",)).fetchall()
+    recovered: list[str] = []
+    audit_hashes: list[str] = []
+    for row in rows:
+        task = get_task(root, row[0])
+        new_state = "FAILED" if policy == "fail" else "QUEUED"
+        message = "recovered stale RUNNING task after restart"
+        with _connect(root) as db:
+            _set_state(db, task.task_id, new_state, message)
+        audit_hashes.append(_audit(root, task, None, f"RECOVERED_{new_state}", _sha(f"recovery:{policy}:{task.task_id}")))
+        recovered.append(task.task_id)
+    return KernelRecoveryResult("tstack-kernel-recovery-result/v1", str(root), policy, len(recovered), tuple(recovered), tuple(audit_hashes))
 
 
 def enqueue_task(root_path: Path, task_id: str) -> KernelTask:
