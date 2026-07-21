@@ -65,6 +65,36 @@
   ],
   "packs": [
     {
+      "id": "language-ada",
+      "title": "Ada Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/ada/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-apl",
+      "title": "APL Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/apl/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-assembly",
       "title": "Assembly Language Pack",
       "version": "0.1.0",
@@ -155,11 +185,41 @@
       ]
     },
     {
+      "id": "language-crystal",
+      "title": "Crystal Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/crystal/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-csharp",
       "title": "C# Language Pack",
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/csharp/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-d",
+      "title": "D Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/d/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -215,6 +275,21 @@
       ]
     },
     {
+      "id": "language-elm",
+      "title": "Elm Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/elm/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-erlang",
       "title": "Erlang Language Pack",
       "version": "0.1.0",
@@ -260,6 +335,21 @@
       ]
     },
     {
+      "id": "language-gleam",
+      "title": "Gleam Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/gleam/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-go",
       "title": "Go Language Pack",
       "version": "0.1.0",
@@ -295,6 +385,21 @@
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/haskell/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-idris",
+      "title": "Idris Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/idris/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -500,6 +605,21 @@
       ]
     },
     {
+      "id": "language-prolog",
+      "title": "Prolog Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/prolog/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-python",
       "title": "Python Language Pack",
       "version": "0.1.0",
@@ -520,6 +640,21 @@
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/r/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-racket",
+      "title": "Racket Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/racket/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -575,6 +710,36 @@
       ]
     },
     {
+      "id": "language-scheme",
+      "title": "Scheme Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/scheme/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-smalltalk",
+      "title": "Smalltalk Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/smalltalk/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-solidity",
       "title": "Solidity Language Pack",
       "version": "0.1.0",
@@ -620,6 +785,21 @@
       ]
     },
     {
+      "id": "language-tcl",
+      "title": "Tcl Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/tcl/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-typescript",
       "title": "TypeScript Language Pack",
       "version": "0.1.0",
@@ -635,11 +815,56 @@
       ]
     },
     {
+      "id": "language-v",
+      "title": "V Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/v/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-vbscript",
+      "title": "VBScript Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/vbscript/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-visual-basic",
       "title": "Visual Basic Language Pack",
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/visual-basic/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-wolfram",
+      "title": "Wolfram Language Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/wolfram/manifest.json",
       "status": "draft",
       "topics": [
         "overview",

@@ -1,0 +1,65 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-smalltalk",
+  "title": "Smalltalk Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "smalltalk",
+  "audience": [
+    "software engineers",
+    "technical leads",
+    "security reviewers",
+    "QA engineers"
+  ],
+  "summary": "Practical engineering guidance for Smalltalk: fundamentals, security, performance, testing, and production readiness.",
+  "topics": [
+    {
+      "id": "overview",
+      "title": "Smalltalk Overview",
+      "path": "overview.md"
+    },
+    {
+      "id": "security",
+      "title": "Smalltalk Security",
+      "path": "security.md"
+    },
+    {
+      "id": "performance",
+      "title": "Smalltalk Performance",
+      "path": "performance.md"
+    },
+    {
+      "id": "testing",
+      "title": "Smalltalk Testing",
+      "path": "testing.md"
+    },
+    {
+      "id": "production",
+      "title": "Smalltalk Production",
+      "path": "production.md"
+    }
+  ],
+  "signals": {
+    "project_files": [],
+    "test_patterns": [
+      "tests/",
+      "test/",
+      "spec/"
+    ],
+    "lockfiles": []
+  },
+  "quality_gates": [
+    "declared-runtime-version",
+    "dependency-lock-or-resolution-strategy",
+    "automated-tests",
+    "lint-or-static-analysis",
+    "security-review-for-input-and-secrets",
+    "production-runtime-plan"
+  ],
+  "limitations": [
+    "This pack provides curated engineering guidance, not a complete export of model knowledge.",
+    "Framework-specific details should live in dedicated framework packs.",
+    "Runtime behavior may vary across Smalltalk implementations, versions, and deployment targets."
+  ]
+}
