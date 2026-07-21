@@ -1,7 +1,7 @@
 import json
 
 from tstack.cli import main
-from tstack.executor import plan_execution
+from tstack.executor import apply_execution, plan_execution
 
 
 def _approval_pair(tmp_path, action: str):
@@ -26,6 +26,30 @@ def test_executor_blocks_high_risk_action(tmp_path) -> None:
     plan = plan_execution(request, decision)
     assert plan.executable is False
     assert "only low-risk actions are eligible for executor planning" in plan.blockers
+
+
+def test_executor_apply_appends_documentation_with_backup(tmp_path) -> None:
+    request, decision = _approval_pair(tmp_path, "Update README documentation")
+    target = tmp_path / "README.md"
+    target.write_text("# Demo\n", encoding="utf-8")
+    result = apply_execution(request, decision, target=target)
+    assert result.schema == "tstack-execution-result/v1"
+    assert result.applied is True
+    assert result.execution_allowed is True
+    assert "TStack Executor Note" in target.read_text(encoding="utf-8")
+    assert result.backup_path.endswith(".bak")
+
+
+def test_executor_apply_cli_updates_documentation(tmp_path, capsys) -> None:
+    request, decision = _approval_pair(tmp_path, "Update README documentation")
+    target = tmp_path / "README.md"
+    target.write_text("# Demo\n", encoding="utf-8")
+    capsys.readouterr()
+    assert main(["execute", "plan", str(request), str(decision), "--target", str(target), "--apply", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-execution-result/v1"
+    assert payload["applied"] is True
+    assert "TStack Executor Note" in target.read_text(encoding="utf-8")
 
 
 def test_executor_cli_returns_blocked_exit_for_high_risk(tmp_path, capsys) -> None:

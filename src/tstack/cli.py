@@ -11,7 +11,7 @@ from tstack.approval import approval_decision_json, approval_decision_markdown, 
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
-from tstack.executor import execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, plan_execution
+from tstack.executor import apply_execution, execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, execution_result_json, execution_result_markdown, plan_execution
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
@@ -165,6 +165,12 @@ def _handle_approval(args: argparse.Namespace) -> int:
 
 def _handle_execute(args: argparse.Namespace) -> int:
     if args.execute_command == "plan":
+        if args.apply:
+            if not args.target:
+                raise ValueError("execute plan --apply requires --target")
+            result = apply_execution(Path(args.request), Path(args.decision), target=Path(args.target))
+            _write_output(execution_result_json(result) if args.format == "json" else execution_result_markdown(result), args.output)
+            return 0
         plan = plan_execution(Path(args.request), Path(args.decision), target=Path(args.target) if args.target else None, apply=args.apply)
         _write_output(executor_plan_json(plan) if args.format == "json" else executor_plan_markdown(plan), args.output)
         return 0 if plan.executable else 15

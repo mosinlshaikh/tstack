@@ -106,6 +106,7 @@ Controlled execution planning:
 
 ```bash
 tstack execute plan approval.json decision.json
+tstack execute plan approval.json decision.json --target README.md --apply
 ```
 
 ## Human Language Understanding

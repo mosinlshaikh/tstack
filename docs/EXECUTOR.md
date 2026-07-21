@@ -6,7 +6,7 @@ Current behavior:
 
 - Creates dry-run execution plans.
 - Allows only approved low-risk documentation-like actions to become executable plans.
-- Keeps actual execution disabled.
+- Can apply a narrow append-only documentation update when `--apply` and `--target` are explicit.
 - Blocks high-risk, production, SSH, secret, auth, payment, and deployment actions.
 
 ## Commands
@@ -14,6 +14,7 @@ Current behavior:
 ```bash
 tstack execute plan approval.json decision.json
 tstack execute plan approval.json decision.json --format json
+tstack execute plan approval.json decision.json --target README.md --apply
 ```
 
 ## Exit Code
@@ -23,4 +24,4 @@ tstack execute plan approval.json decision.json --format json
 
 ## Boundary
 
-Even when a plan is eligible, `execution_allowed` remains `false`. Future execution requires a separate implementation with tests, policy checks, rollback verification, and explicit approval enforcement.
+Apply mode is limited to approved low-risk documentation-like actions on existing `.md` or `.txt` files. It creates a backup and performs an append-only update. Future broader execution requires tests, policy checks, rollback verification, and explicit approval enforcement.
