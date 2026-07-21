@@ -14,6 +14,7 @@ from tstack.release_orchestrator import evaluate_release, release_json, release_
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.reproducibility import compare_builds, receipt_json, repro_json, verify_attestation
 from tstack.scanner import report_json, report_markdown, scan_project
+from tstack.ssh import create_ssh_policy, load_ssh_policy, plan_ssh_command, ssh_plan_json, ssh_plan_markdown
 from tstack.supplychain import build_manifest, checksums_text, manifest_json, sbom_json, verify_manifest
 from tstack.trustgate import evaluate_release_trust, trust_gate_json, trust_gate_markdown
 
@@ -207,6 +208,19 @@ def _handle_release_check(args: argparse.Namespace) -> int:
     return 0 if result.passed else 8
 
 
+def _handle_ssh(args: argparse.Namespace) -> int:
+    if args.ssh_command == "init":
+        destination = create_ssh_policy(Path(args.path), force=args.force)
+        print(f"Written: {destination}")
+        return 0
+    if args.ssh_command == "plan":
+        policy = load_ssh_policy(Path(args.policy).expanduser().resolve())
+        plan = plan_ssh_command(policy, target=args.target, command=args.remote_command, user=args.user, port=args.port)
+        _write_output(ssh_plan_json(plan) if args.format == "json" else ssh_plan_markdown(plan), args.output)
+        return 0 if plan.valid else 13
+    raise ValueError(f"unknown ssh command: {args.ssh_command}")
+
+
 def _add_scan_limits(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("path", nargs="?", default=".")
     parser.add_argument("--max-files", type=int, default=10000)
@@ -259,6 +273,21 @@ def build_parser() -> argparse.ArgumentParser:
     item = subparsers.add_parser("attestation-verify", help="Verify GitHub/Sigstore provenance and write a receipt"); item.add_argument("artifact"); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--source-digest"); item.add_argument("--allow-self-hosted", action="store_true"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_attestation_verify)
     item = subparsers.add_parser("trust-gate", help="Evaluate complete release integrity and provenance prerequisites"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--commit", required=True); item.add_argument("--require-attestation-receipt", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_trust_gate)
     item = subparsers.add_parser("release-check", help="Run the complete project, artifact, reproducibility, and provenance release gate"); item.add_argument("--project", default="."); item.add_argument("--release", default="dist"); item.add_argument("--rebuilt", required=True); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--commit", required=True); item.add_argument("--allow-missing-attestation", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_release_check)
+    item = subparsers.add_parser("ssh", help="Plan policy-controlled SSH automation without remote execution")
+    ssh_subparsers = item.add_subparsers(dest="ssh_command", required=True)
+    ssh_item = ssh_subparsers.add_parser("init", help="Create a default SSH automation policy")
+    ssh_item.add_argument("path", nargs="?", default=".")
+    ssh_item.add_argument("--force", action="store_true")
+    ssh_item.set_defaults(handler=_handle_ssh)
+    ssh_item = ssh_subparsers.add_parser("plan", help="Create a policy-checked SSH command plan")
+    ssh_item.add_argument("target")
+    ssh_item.add_argument("remote_command")
+    ssh_item.add_argument("--policy", required=True)
+    ssh_item.add_argument("--user")
+    ssh_item.add_argument("--port", type=int)
+    ssh_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    ssh_item.add_argument("--output", "-o")
+    ssh_item.set_defaults(handler=_handle_ssh)
     for workflow in WORKFLOWS:
         item = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_workflow, workflow=workflow)
     return parser

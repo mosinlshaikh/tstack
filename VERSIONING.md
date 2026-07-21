@@ -71,6 +71,8 @@ Current contract:
 - `8`: release-check failure.
 - `10`: evidence-bundle verification failure.
 - `11`: decision-plan review or hold result.
+- `12`: knowledge validation failure.
+- `13`: SSH automation plan blocked by policy.
 
 ## Schema Versioning
 
