@@ -1,0 +1,47 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-rust",
+  "title": "Rust Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "rust",
+  "audience": [
+    "systems engineers",
+    "backend engineers",
+    "security engineers",
+    "technical leads"
+  ],
+  "summary": "Foundational Rust engineering guidance for safety, performance, testing, security, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "Rust Overview", "path": "overview.md" },
+    { "id": "security", "title": "Rust Security", "path": "security.md" },
+    { "id": "performance", "title": "Rust Performance", "path": "performance.md" },
+    { "id": "testing", "title": "Rust Testing", "path": "testing.md" },
+    { "id": "production", "title": "Rust Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": [
+      "Cargo.toml"
+    ],
+    "test_patterns": [
+      "tests/",
+      "*_test.rs"
+    ],
+    "lockfiles": [
+      "Cargo.lock"
+    ]
+  },
+  "quality_gates": [
+    "rust-version-or-toolchain",
+    "cargo-lock-for-applications",
+    "automated-tests",
+    "clippy-or-static-analysis",
+    "unsafe-review",
+    "production-runtime-plan"
+  ],
+  "limitations": [
+    "This pack covers general Rust engineering and does not replace domain-specific guidance.",
+    "Unsafe code can be valid but requires explicit review and justification."
+  ]
+}

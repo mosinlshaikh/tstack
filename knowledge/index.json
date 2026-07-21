@@ -78,6 +78,36 @@
         "testing",
         "production"
       ]
+    },
+    {
+      "id": "language-go",
+      "title": "Go Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/go/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-rust",
+      "title": "Rust Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/rust/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     }
   ],
   "compatibility": {

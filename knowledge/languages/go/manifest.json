@@ -1,0 +1,47 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-go",
+  "title": "Go Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "go",
+  "audience": [
+    "backend engineers",
+    "platform engineers",
+    "SRE teams",
+    "technical leads"
+  ],
+  "summary": "Foundational Go engineering guidance for services, concurrency, testing, performance, security, and production operations.",
+  "topics": [
+    { "id": "overview", "title": "Go Overview", "path": "overview.md" },
+    { "id": "security", "title": "Go Security", "path": "security.md" },
+    { "id": "performance", "title": "Go Performance", "path": "performance.md" },
+    { "id": "testing", "title": "Go Testing", "path": "testing.md" },
+    { "id": "production", "title": "Go Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": [
+      "go.mod",
+      "go.work"
+    ],
+    "test_patterns": [
+      "*_test.go"
+    ],
+    "lockfiles": [
+      "go.sum"
+    ]
+  },
+  "quality_gates": [
+    "go-version-directive",
+    "go-sum-present-for-modules",
+    "automated-tests",
+    "static-analysis-or-vet",
+    "context-and-timeout-review",
+    "production-runtime-plan"
+  ],
+  "limitations": [
+    "This pack covers general Go engineering and does not replace framework-specific guidance.",
+    "Runtime behavior depends on service architecture, deployment target, and workload characteristics."
+  ]
+}
