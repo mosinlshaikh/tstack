@@ -8,11 +8,12 @@ from pathlib import Path
 
 from tstack import __version__
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
+from tstack.scanner import report_json, report_markdown, scan_project
 
 
 def _write_output(content: str, output: str | None) -> None:
     if output is None:
-        print(content)
+        print(content, end="" if content.endswith("\n") else "\n")
         return
     destination = Path(output).expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -54,6 +55,17 @@ def _handle_validate(args: argparse.Namespace) -> int:
     return 0 if all(item.valid for item in results) else 2
 
 
+def _handle_scan(args: argparse.Namespace) -> int:
+    report = scan_project(Path(args.path), max_files=args.max_files, max_file_bytes=args.max_file_bytes)
+    content = report_json(report) if args.format == "json" else report_markdown(report)
+    _write_output(content, args.output)
+    if args.fail_on == "never":
+        return 0
+    if args.fail_on == "hold":
+        return 3 if report.verdict == "HOLD" else 0
+    return 3 if report.verdict in {"HOLD", "REVIEW"} else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tstack", description="Run TTRL evidence-driven engineering workflows.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -71,6 +83,15 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     validate_parser.add_argument("--output", "-o")
     validate_parser.set_defaults(handler=_handle_validate)
+
+    scan_parser = subparsers.add_parser("scan", help="Audit a project and generate an evidence-based risk report")
+    scan_parser.add_argument("path", nargs="?", default=".")
+    scan_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    scan_parser.add_argument("--output", "-o", help="Write the report to a file")
+    scan_parser.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold", help="Control non-zero CI exit behavior")
+    scan_parser.add_argument("--max-files", type=int, default=10000)
+    scan_parser.add_argument("--max-file-bytes", type=int, default=1000000)
+    scan_parser.set_defaults(handler=_handle_scan)
 
     for workflow in WORKFLOWS:
         workflow_parser = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow")
