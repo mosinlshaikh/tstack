@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 SANDBOX_POLICY_SCHEMA = "tstack-sandbox-policy/v1"
 SANDBOX_PLAN_SCHEMA = "tstack-sandbox-plan/v1"
+SANDBOX_RESULT_SCHEMA = "tstack-sandbox-result/v1"
 
 DEFAULT_ALLOWED_COMMANDS = ("python", "pytest", "git", "node", "npm")
 SENSITIVE_ENV_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "KEY", "CREDENTIAL", "AUTH")
@@ -34,6 +37,20 @@ class SandboxPlan:
     timeout_seconds: int
     writable: bool
     execution_allowed: bool
+    blockers: tuple[str, ...]
+    redacted_env_markers: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SandboxResult:
+    schema: str
+    command: tuple[str, ...]
+    workspace: str
+    executed: bool
+    exit_code: int | None
+    timed_out: bool
+    stdout: str
+    stderr: str
     blockers: tuple[str, ...]
     redacted_env_markers: tuple[str, ...]
 
@@ -107,6 +124,52 @@ def sandbox_plan_json(plan: SandboxPlan) -> str:
     return json.dumps(asdict(plan), indent=2, sort_keys=True) + "\n"
 
 
+def _redacted_env() -> dict[str, str]:
+    clean: dict[str, str] = {}
+    for key, value in os.environ.items():
+        upper = key.upper()
+        if any(marker in upper for marker in SENSITIVE_ENV_MARKERS):
+            continue
+        clean[key] = value
+    return clean
+
+
+def run_sandbox_command(policy: SandboxPolicy, command: tuple[str, ...], *, cwd: Path | None = None, write: bool = False, network: bool = False) -> SandboxResult:
+    plan = plan_sandbox_command(policy, command, cwd=cwd, write=write, network=network)
+    if plan.blockers:
+        return SandboxResult(SANDBOX_RESULT_SCHEMA, plan.command, plan.workspace, False, None, False, "", "", plan.blockers, plan.redacted_env_markers)
+    try:
+        completed = subprocess.run(
+            list(plan.command),
+            cwd=plan.workspace,
+            env=_redacted_env(),
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=plan.timeout_seconds,
+        )
+        return SandboxResult(
+            SANDBOX_RESULT_SCHEMA,
+            plan.command,
+            plan.workspace,
+            True,
+            completed.returncode,
+            False,
+            completed.stdout[-4000:],
+            completed.stderr[-4000:],
+            (),
+            plan.redacted_env_markers,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return SandboxResult(SANDBOX_RESULT_SCHEMA, plan.command, plan.workspace, True, None, True, (exc.stdout or "")[-4000:] if isinstance(exc.stdout, str) else "", (exc.stderr or "")[-4000:] if isinstance(exc.stderr, str) else "command timed out", (), plan.redacted_env_markers)
+    except OSError as exc:
+        return SandboxResult(SANDBOX_RESULT_SCHEMA, plan.command, plan.workspace, False, None, False, "", str(exc), (str(exc),), plan.redacted_env_markers)
+
+
+def sandbox_result_json(result: SandboxResult) -> str:
+    return json.dumps(asdict(result), indent=2, sort_keys=True) + "\n"
+
+
 def sandbox_plan_markdown(plan: SandboxPlan) -> str:
     lines = [
         "# TStack Sandbox Plan",
@@ -125,3 +188,21 @@ def sandbox_plan_markdown(plan: SandboxPlan) -> str:
     lines.extend(["", "## Environment Redaction", ""])
     lines.extend(f"- `{item}`" for item in plan.redacted_env_markers)
     return "\n".join(lines) + "\n"
+
+
+def sandbox_result_markdown(result: SandboxResult) -> str:
+    lines = [
+        "# TStack Sandbox Result",
+        "",
+        f"- Command: `{' '.join(result.command)}`",
+        f"- Workspace: `{result.workspace}`",
+        f"- Executed: {'yes' if result.executed else 'no'}",
+        f"- Exit code: `{result.exit_code}`",
+        f"- Timed out: {'yes' if result.timed_out else 'no'}",
+        "",
+        "## Blockers",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in result.blockers or ("none",))
+    lines.extend(["", "## Stdout", "", "```text", result.stdout, "```", "", "## Stderr", "", "```text", result.stderr, "```", ""])
+    return "\n".join(lines)

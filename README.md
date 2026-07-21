@@ -124,6 +124,7 @@ Sandbox planning:
 ```bash
 tstack sandbox init . --output sandbox-policy.json
 tstack sandbox plan sandbox-policy.json --format json --cmd python -m pytest
+tstack sandbox run sandbox-policy.json --format json --cmd python -c "print('ok')"
 ```
 
 ## Local Desktop OS

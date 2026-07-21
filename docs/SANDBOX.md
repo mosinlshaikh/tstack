@@ -5,6 +5,7 @@ TStack sandbox support currently creates safe subprocess plans. It does not exec
 ```bash
 tstack sandbox init . --output sandbox-policy.json
 tstack sandbox plan sandbox-policy.json --format json --cmd python -m pytest
+tstack sandbox run sandbox-policy.json --format json --cmd python -c "print('ok')"
 ```
 
 The sandbox plan enforces:
@@ -19,4 +20,6 @@ The sandbox plan enforces:
 
 ## Boundary
 
-This is a policy foundation, not a full OS sandbox. Future execution should run through isolated subprocesses, containers, or OS-level sandboxing while preserving this policy contract.
+The `run` command uses a direct subprocess call with `shell=False`, a bounded timeout, redacted sensitive environment variables, and the configured workspace as the working directory.
+
+This is controlled subprocess execution, not a full OS sandbox. Stronger isolation should later add containers, OS-level sandboxing, or separate worker identities while preserving this policy contract.
