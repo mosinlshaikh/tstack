@@ -75,6 +75,15 @@ class OrchestrationPlan:
     execution_allowed: bool = False
 
 
+@dataclass(frozen=True)
+class AgentStats:
+    schema: str
+    total_agents: int
+    categories: dict[str, int]
+    approval_required: int
+    execution_allowed: int
+
+
 AGENT_CATALOG: tuple[AgentDefinition, ...] = (
     AgentDefinition("architect-agent", "Architect Agent", "engineering", ("system architecture", "API boundaries", "data modeling", "technical tradeoffs"), ("read-repo", "write-plan")),
     AgentDefinition("developer-agent", "Developer Agent", "engineering", ("implementation planning", "code generation proposals", "refactoring plans", "bug fix plans"), ("read-repo", "write-plan")),
@@ -320,6 +329,38 @@ def agent_catalog_markdown(agents: tuple[AgentDefinition, ...]) -> str:
             current = agent.category
             lines.extend([f"## {current.title()}", ""])
         lines.append(f"- `{agent.id}` - {agent.name}: {', '.join(agent.responsibilities)}")
+    return "\n".join(lines) + "\n"
+
+
+def agent_stats() -> AgentStats:
+    categories: dict[str, int] = {}
+    for agent in AGENT_CATALOG:
+        categories[agent.category] = categories.get(agent.category, 0) + 1
+    return AgentStats(
+        schema="tstack-agent-stats/v1",
+        total_agents=len(AGENT_CATALOG),
+        categories=dict(sorted(categories.items())),
+        approval_required=sum(1 for agent in AGENT_CATALOG if agent.approval_required),
+        execution_allowed=sum(1 for agent in AGENT_CATALOG if agent.execution_allowed),
+    )
+
+
+def agent_stats_json(stats: AgentStats) -> str:
+    return json.dumps(asdict(stats), indent=2, sort_keys=True) + "\n"
+
+
+def agent_stats_markdown(stats: AgentStats) -> str:
+    lines = [
+        "# TStack Agent Stats",
+        "",
+        f"- Total agents: {stats.total_agents}",
+        f"- Approval required: {stats.approval_required}",
+        f"- Execution allowed: {stats.execution_allowed}",
+        "",
+        "## Categories",
+        "",
+    ]
+    lines.extend(f"- `{category}`: {count}" for category, count in stats.categories.items())
     return "\n".join(lines) + "\n"
 
 

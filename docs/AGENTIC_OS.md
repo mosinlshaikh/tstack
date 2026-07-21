@@ -18,6 +18,7 @@ List specialized agents:
 
 ```bash
 tstack agent catalog
+tstack agent stats
 tstack agent catalog --category engineering
 tstack agent show ui-ux-agent
 tstack agent select "Medical Store Management System website with admin panel and deployment"

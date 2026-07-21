@@ -82,6 +82,7 @@ TStack can generate approval-gated agentic delivery plans from discovery to depl
 tstack agent plan "Build a SaaS CRM with advanced UI/UX"
 tstack agent plan "Build a SaaS CRM" --format json
 tstack agent catalog
+tstack agent stats
 tstack agent show ui-ux-agent
 tstack agent select "Medical Store Management System website with admin panel and deployment"
 tstack agent orchestrate "Medical Store Management System website with admin panel and deployment"
