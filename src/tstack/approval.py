@@ -8,6 +8,7 @@ from pathlib import Path
 
 APPROVAL_REQUEST_SCHEMA = "tstack-approval-request/v1"
 APPROVAL_DECISION_SCHEMA = "tstack-approval-decision/v1"
+APPROVAL_READINESS_SCHEMA = "tstack-approval-readiness/v1"
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,18 @@ class ApprovalDecision:
     execution_allowed: bool
     approver: str
     reason: str
+
+
+@dataclass(frozen=True)
+class ApprovalReadiness:
+    schema: str
+    request_id: str
+    ready: bool
+    risk: str
+    approved: bool
+    execution_allowed: bool
+    blockers: tuple[str, ...]
+    required_checks: tuple[str, ...]
 
 
 def classify_risk(action: str) -> tuple[str, str]:
@@ -137,3 +150,64 @@ def approval_decision_markdown(decision: ApprovalDecision) -> str:
             decision.reason,
         ]
     ) + "\n"
+
+
+def evaluate_readiness(request_path: Path, decision_path: Path) -> ApprovalReadiness:
+    request = json.loads(request_path.expanduser().resolve().read_text(encoding="utf-8"))
+    decision = json.loads(decision_path.expanduser().resolve().read_text(encoding="utf-8"))
+    if request.get("schema") != APPROVAL_REQUEST_SCHEMA:
+        raise ValueError("invalid approval request schema")
+    if decision.get("schema") != APPROVAL_DECISION_SCHEMA:
+        raise ValueError("invalid approval decision schema")
+    if request.get("request_id") != decision.get("request_id"):
+        raise ValueError("approval request and decision ids do not match")
+
+    blockers: list[str] = []
+    approved = bool(decision.get("approved"))
+    risk = str(request.get("risk", "high"))
+    if not approved:
+        blockers.append("request is not approved")
+    if risk == "high":
+        blockers.append("high-risk actions require a future executor policy and rollback verification")
+    blockers.append("execution executor is not implemented")
+
+    return ApprovalReadiness(
+        schema=APPROVAL_READINESS_SCHEMA,
+        request_id=str(request["request_id"]),
+        ready=False,
+        risk=risk,
+        approved=approved,
+        execution_allowed=False,
+        blockers=tuple(blockers),
+        required_checks=(
+            "human approval",
+            "policy verification",
+            "test verification",
+            "security verification",
+            "rollback verification",
+            "executor availability",
+        ),
+    )
+
+
+def approval_readiness_json(readiness: ApprovalReadiness) -> str:
+    return json.dumps(asdict(readiness), indent=2, sort_keys=True) + "\n"
+
+
+def approval_readiness_markdown(readiness: ApprovalReadiness) -> str:
+    lines = [
+        "# TStack Approval Readiness",
+        "",
+        f"- Request ID: `{readiness.request_id}`",
+        f"- Risk: `{readiness.risk}`",
+        f"- Approved: {'yes' if readiness.approved else 'no'}",
+        f"- Ready: {'yes' if readiness.ready else 'no'}",
+        f"- Execution allowed: {'yes' if readiness.execution_allowed else 'no'}",
+        "",
+        "## Blockers",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in readiness.blockers)
+    lines.extend(["", "## Required Checks", ""])
+    lines.extend(f"- {item}" for item in readiness.required_checks)
+    return "\n".join(lines) + "\n"

@@ -29,6 +29,12 @@ Record a decision:
 tstack approval decide approval.json --approved --approver Mosin --reason "Reviewed and accepted."
 ```
 
+Evaluate readiness:
+
+```bash
+tstack approval readiness approval.json decision.json
+```
+
 ## Boundary
 
 Approval records intent. It does not execute the action.
@@ -41,3 +47,5 @@ Execution remains disabled until a future executor verifies:
 - Security checks.
 - Rollback readiness.
 - Human approval.
+
+Readiness currently remains blocked because the execution module is not implemented yet.

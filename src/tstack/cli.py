@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tstack import __version__
 from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, agent_stats, agent_stats_json, agent_stats_markdown, build_agent_plan, build_orchestration_plan, failure_route_json, failure_route_markdown, get_agent, list_agents, orchestration_json, orchestration_markdown, route_failure, select_agents_for_goal
-from tstack.approval import approval_decision_json, approval_decision_markdown, approval_request_json, approval_request_markdown, create_approval_request, decide_approval
+from tstack.approval import approval_decision_json, approval_decision_markdown, approval_readiness_json, approval_readiness_markdown, approval_request_json, approval_request_markdown, create_approval_request, decide_approval, evaluate_readiness
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
@@ -154,6 +154,10 @@ def _handle_approval(args: argparse.Namespace) -> int:
     if args.approval_command == "decide":
         decision = decide_approval(Path(args.request), approved=args.approved, approver=args.approver, reason=args.reason)
         _write_output(approval_decision_json(decision) if args.format == "json" else approval_decision_markdown(decision), args.output)
+        return 0
+    if args.approval_command == "readiness":
+        readiness = evaluate_readiness(Path(args.request), Path(args.decision))
+        _write_output(approval_readiness_json(readiness) if args.format == "json" else approval_readiness_markdown(readiness), args.output)
         return 0
     raise ValueError(f"unknown approval command: {args.approval_command}")
 
@@ -463,6 +467,12 @@ def build_parser() -> argparse.ArgumentParser:
     approval_item.add_argument("--approved", action="store_true")
     approval_item.add_argument("--approver", required=True)
     approval_item.add_argument("--reason", required=True)
+    approval_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    approval_item.add_argument("--output", "-o")
+    approval_item.set_defaults(handler=_handle_approval)
+    approval_item = approval_subparsers.add_parser("readiness", help="Evaluate whether an approved request is ready for future execution")
+    approval_item.add_argument("request")
+    approval_item.add_argument("decision")
     approval_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     approval_item.add_argument("--output", "-o")
     approval_item.set_defaults(handler=_handle_approval)

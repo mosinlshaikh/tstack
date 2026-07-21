@@ -99,6 +99,7 @@ TStack can create approval requests and record human approval decisions while ke
 tstack approval request "Deploy to production over SSH"
 tstack approval request "Update README" --format json --output approval.json
 tstack approval decide approval.json --approved --approver Mosin --reason "Reviewed and accepted."
+tstack approval readiness approval.json decision.json
 ```
 
 ## Human Language Understanding
