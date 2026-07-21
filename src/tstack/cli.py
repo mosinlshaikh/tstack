@@ -1,7 +1,6 @@
 """Command-line interface for TStack."""
 
 from __future__ import annotations
-
 import argparse
 import json
 import sys
@@ -132,7 +131,8 @@ def _handle_manifest(args: argparse.Namespace) -> int:
     manifest_target = args.output or str(root / "manifest.json")
     _write_output(manifest_json(manifest), manifest_target)
     if args.checksums:
-        _write_output(checksums_text(manifest), str(root / "checksums.sha256"))
+        _write_output(checksums_text(manifest, "sha256"), str(root / "checksums.sha256"))
+        _write_output(checksums_text(manifest, "sha3-256"), str(root / "checksums.sha3-256"))
     return 0
 
 
@@ -165,7 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
     item = subparsers.add_parser("fix", help="Plan or apply safe controls"); item.add_argument("path", nargs="?", default="."); item.add_argument("--apply", action="store_true"); item.add_argument("--force", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_fix)
 
     item = subparsers.add_parser("sbom", help="Generate CycloneDX JSON SBOM for the active environment"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_sbom)
-    item = subparsers.add_parser("manifest", help="Create deterministic release artifact manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--output", "-o"); item.add_argument("--checksums", action="store_true"); item.set_defaults(handler=_handle_manifest)
+    item = subparsers.add_parser("manifest", help="Create deterministic dual-hash release artifact manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--output", "-o"); item.add_argument("--checksums", action="store_true"); item.set_defaults(handler=_handle_manifest)
     item = subparsers.add_parser("verify", help="Verify artifacts against a release manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--manifest"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_verify)
 
     for workflow in WORKFLOWS:
