@@ -43,6 +43,17 @@ class KnowledgeStats:
     languages: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class KnowledgeSearchHit:
+    pack_id: str
+    title: str
+    topic_id: str
+    topic_title: str
+    path: str
+    score: int
+    excerpt: str
+
+
 def knowledge_root() -> Path:
     return Path(__file__).resolve().parents[2] / "knowledge"
 
@@ -154,6 +165,76 @@ def read_topic(pack_id: str, topic_id: str, root: Path | None = None) -> str:
             topic_path = base.parent / pack.path
             return (topic_path.parent / topic.path).read_text(encoding="utf-8")
     raise KeyError(f"unknown topic for {pack_id}: {topic_id}")
+
+
+def search_knowledge(query: str, *, limit: int = 20, root: Path | None = None) -> tuple[KnowledgeSearchHit, ...]:
+    term = query.strip().lower()
+    if not term:
+        raise ValueError("search query is required")
+    if limit < 1:
+        raise ValueError("search limit must be positive")
+
+    base = root or knowledge_root()
+    hits: list[KnowledgeSearchHit] = []
+    for pack in list_packs(base):
+        manifest_path = base.parent / pack.path
+        for topic in pack.topics:
+            topic_path = manifest_path.parent / topic.path
+            content = topic_path.read_text(encoding="utf-8")
+            haystack = f"{pack.id}\n{pack.title}\n{topic.id}\n{topic.title}\n{content}".lower()
+            count = haystack.count(term)
+            if count == 0:
+                continue
+            content_lower = content.lower()
+            index = content_lower.find(term)
+            start = max(0, index - 80)
+            end = min(len(content), index + len(term) + 120)
+            excerpt = " ".join(content[start:end].split())
+            hits.append(KnowledgeSearchHit(pack.id, pack.title, topic.id, topic.title, str(topic_path.relative_to(base.parent)), count, excerpt))
+    hits.sort(key=lambda item: (-item.score, item.pack_id, item.topic_id))
+    return tuple(hits[:limit])
+
+
+def search_json(query: str, hits: tuple[KnowledgeSearchHit, ...]) -> str:
+    return json.dumps(
+        {
+            "schema": "tstack-knowledge-search/v1",
+            "query": query,
+            "count": len(hits),
+            "hits": [
+                {
+                    "pack_id": hit.pack_id,
+                    "title": hit.title,
+                    "topic_id": hit.topic_id,
+                    "topic_title": hit.topic_title,
+                    "path": hit.path,
+                    "score": hit.score,
+                    "excerpt": hit.excerpt,
+                }
+                for hit in hits
+            ],
+        },
+        indent=2,
+    ) + "\n"
+
+
+def search_markdown(query: str, hits: tuple[KnowledgeSearchHit, ...]) -> str:
+    lines = ["# TStack Knowledge Search", "", f"- Query: `{query}`", f"- Results: {len(hits)}", ""]
+    for hit in hits:
+        lines.extend(
+            [
+                f"## `{hit.pack_id}` / `{hit.topic_id}`",
+                "",
+                f"- Title: {hit.title}",
+                f"- Topic: {hit.topic_title}",
+                f"- Path: `{hit.path}`",
+                f"- Score: {hit.score}",
+                "",
+                hit.excerpt,
+                "",
+            ]
+        )
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def knowledge_stats(packs: tuple[KnowledgePack, ...] | None = None) -> KnowledgeStats:

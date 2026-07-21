@@ -45,6 +45,7 @@ tstack knowledge list
 tstack knowledge stats
 tstack knowledge show language-python
 tstack knowledge topic language-python security
+tstack knowledge search secrets
 tstack knowledge validate
 ```
 

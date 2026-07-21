@@ -99,6 +99,15 @@ def test_knowledge_unknown_topic_fails(capsys) -> None:
     assert "unknown topic" in capsys.readouterr().err
 
 
+def test_knowledge_search_returns_matches(capsys) -> None:
+    assert main(["knowledge", "search", "secrets", "--limit", "5", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-knowledge-search/v1"
+    assert payload["query"] == "secrets"
+    assert payload["count"] > 0
+    assert all("pack_id" in hit for hit in payload["hits"])
+
+
 def test_init_creates_project_contract(tmp_path, capsys) -> None:
     assert main(["init", str(tmp_path)]) == 0
     assert (tmp_path / ".tstack" / "config.json").is_file()
