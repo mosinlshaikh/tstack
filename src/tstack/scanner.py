@@ -9,6 +9,8 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from tstack.frameworks import FrameworkProfile, analyze_frameworks
+
 IGNORED_DIRS = {".git", ".hg", ".svn", ".tox", ".venv", "venv", "node_modules", "dist", "build", "target", "__pycache__", ".idea", ".vscode"}
 TEXT_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".kt", ".kts", ".go", ".rs", ".php", ".rb", ".cs", ".c", ".h", ".cpp", ".hpp", ".html", ".css", ".scss", ".sql", ".sh", ".ps1", ".yml", ".yaml", ".toml", ".json", ".xml", ".md", ".txt", ".env"}
 LANGUAGES = {
@@ -24,6 +26,7 @@ SECRET_PATTERNS = (
     ("generic-secret", re.compile(r"(?i)\b(?:api[_-]?key|secret|token|password)\b\s*[:=]\s*['\"][^'\"\n]{8,}['\"]")),
 )
 
+
 @dataclass(frozen=True)
 class Finding:
     rule_id: str
@@ -33,6 +36,7 @@ class Finding:
     evidence: str
     remediation: str
 
+
 @dataclass(frozen=True)
 class ScanReport:
     root: str
@@ -40,6 +44,7 @@ class ScanReport:
     files_scanned: int
     bytes_scanned: int
     languages: dict[str, int]
+    frameworks: tuple[FrameworkProfile, ...]
     controls: dict[str, bool]
     findings: tuple[Finding, ...]
     risk_score: int
@@ -92,8 +97,9 @@ def scan_project(path: Path, *, max_files: int = 10000, max_file_bytes: int = 1_
             if pattern.search(text):
                 findings.append(Finding("SEC002", "critical", f"Possible embedded secret: {rule_id}", relative, "A secret-like credential pattern matched file content.", "Verify immediately; remove and rotate any real credential. Use environment or secret-manager injection."))
                 break
-        if len(text.splitlines()) > 1500:
-            findings.append(Finding("ARC001", "medium", "Oversized source file", relative, f"File has {len(text.splitlines())} lines.", "Split by responsibility and add focused tests before refactoring."))
+        line_count = len(text.splitlines())
+        if line_count > 1500:
+            findings.append(Finding("ARC001", "medium", "Oversized source file", relative, f"File has {line_count} lines.", "Split by responsibility and add focused tests before refactoring."))
 
     names = {Path(item).name.lower() for item in relative_files}
     controls = {
@@ -103,7 +109,7 @@ def scan_project(path: Path, *, max_files: int = 10000, max_file_bytes: int = 1_
         "tests": any(part.lower() in {"test", "tests", "spec", "specs"} for item in relative_files for part in Path(item).parts[:-1]),
         "ci": any(item.startswith(".github/workflows/") or item in {".gitlab-ci.yml", "azure-pipelines.yml"} for item in relative_files),
         "security_policy": any(item.lower() == "security.md" or item.lower() == ".github/security.md" for item in relative_files),
-        "dependency_lock": any(name in names for name in {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "poetry.lock", "pipfile.lock", "cargo.lock", "go.sum", "gradle.lockfile"}),
+        "dependency_lock": any(name in names for name in {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "poetry.lock", "pipfile.lock", "uv.lock", "composer.lock", "cargo.lock", "go.sum", "gradle.lockfile"}),
     }
     control_rules = {
         "readme": ("DOC001", "low", "README missing", "Add purpose, setup, usage, architecture, and support information."),
@@ -119,11 +125,17 @@ def scan_project(path: Path, *, max_files: int = 10000, max_file_bytes: int = 1_
             rule, severity, title, remediation = control_rules[key]
             findings.append(Finding(rule, severity, title, None, f"Control '{key}' was not detected.", remediation))
 
+    frameworks, framework_findings = analyze_frameworks(root, relative_files)
+    findings.extend(
+        Finding(item.rule_id, item.severity, item.title, item.path, item.evidence, item.remediation)
+        for item in framework_findings
+    )
+
     weights = {"low": 2, "medium": 7, "high": 15, "critical": 30}
     risk_score = min(100, sum(weights[item.severity] for item in findings))
     verdict = "HOLD" if any(item.severity == "critical" for item in findings) or risk_score >= 60 else "REVIEW" if risk_score >= 20 else "PASS"
     findings.sort(key=lambda item: ({"critical": 0, "high": 1, "medium": 2, "low": 3}[item.severity], item.rule_id, item.path or ""))
-    return ScanReport(str(root), digest.hexdigest(), files_scanned, bytes_scanned, dict(languages.most_common()), controls, tuple(findings), risk_score, verdict)
+    return ScanReport(str(root), digest.hexdigest(), files_scanned, bytes_scanned, dict(languages.most_common()), frameworks, controls, tuple(findings), risk_score, verdict)
 
 
 def report_json(report: ScanReport) -> str:
@@ -133,6 +145,11 @@ def report_json(report: ScanReport) -> str:
 def report_markdown(report: ScanReport) -> str:
     lines = ["# TStack Project Audit", "", f"- **Root:** `{report.root}`", f"- **Fingerprint:** `{report.fingerprint}`", f"- **Files scanned:** {report.files_scanned}", f"- **Bytes scanned:** {report.bytes_scanned}", f"- **Risk score:** {report.risk_score}/100", f"- **Verdict:** **{report.verdict}**", "", "## Languages", ""]
     lines.extend([f"- {name}: {count} files" for name, count in report.languages.items()] or ["- No recognized source languages detected."])
+    lines.extend(["", "## Frameworks", ""])
+    if report.frameworks:
+        lines.extend(f"- **{profile.name}** — {profile.checks_run} checks; evidence: {', '.join(profile.evidence) or 'source files'}" for profile in report.frameworks)
+    else:
+        lines.append("- No supported framework profile detected.")
     lines.extend(["", "## Engineering Controls", ""])
     lines.extend(f"- {'PASS' if value else 'MISSING'} — {name.replace('_', ' ')}" for name, value in report.controls.items())
     lines.extend(["", "## Findings", ""])
