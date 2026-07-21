@@ -8,7 +8,11 @@ It currently supports:
 tstack workspace init .
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
+tstack task queue TASK_ID
+tstack task run-next
 tstack task run TASK_ID
+tstack task events --task-id TASK_ID
+tstack task cancel TASK_ID --reason "not needed"
 tstack kernel-audit verify
 tstack kernel-rollback apply TASK_ID
 ```
@@ -19,6 +23,10 @@ tstack kernel-rollback apply TASK_ID
 - Workspace-local approval signing key at `.tstack/approval.key`
 - Deterministic task IDs
 - Task persistence
+- Persisted task events
+- Queue transition and run-next scheduler foundation
+- Cancellation for non-terminal tasks
+- Timeout failure path
 - Signed approval records
 - Approval replay prevention through `max_uses`
 - Approved `filesystem.write` execution
@@ -29,8 +37,7 @@ tstack kernel-rollback apply TASK_ID
 ## Current Limits
 
 - No daemon process yet
-- No task queue or worker pool yet
-- No cancellation implementation yet
+- No worker pool yet
 - No restart/resume worker recovery yet
 - Only `filesystem.write` is executable in this vertical slice
 - Signing is workspace-local HMAC, not asymmetric public-key approval

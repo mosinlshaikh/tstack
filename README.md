@@ -125,7 +125,11 @@ SQLite Runtime Vertical Slice:
 tstack workspace init .
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
+tstack task queue TASK_ID
+tstack task run-next
 tstack task run TASK_ID
+tstack task events --task-id TASK_ID
+tstack task cancel TASK_ID --reason "not needed"
 tstack kernel-audit verify
 tstack kernel-rollback apply TASK_ID
 ```

@@ -20,7 +20,7 @@ from tstack.environment import environment_json, environment_markdown, inspect_e
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.file_runtime import apply_file_transaction, file_transaction_json, file_transaction_markdown, undo_file_transaction
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
-from tstack.kernel import approve_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_tasks as kernel_list_tasks, rollback_task, run_task, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task as kernel_cancel_task, enqueue_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, rollback_task, run_next_task, run_task, submit_task, verify_audit_chain
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
 from tstack.mastery import level_10_mastery_profile, mastery_json, mastery_markdown
@@ -257,11 +257,22 @@ def _handle_task(args: argparse.Namespace) -> int:
         _write_output(kernel_json(get_task(Path(args.workspace), args.task_id)), args.output)
         return 0
     if args.task_command == "run":
-        result = run_task(Path(args.workspace), args.task_id)
+        result = run_task(Path(args.workspace), args.task_id, timeout_seconds=args.timeout_seconds)
         _write_output(kernel_json(result), args.output)
         return 0
+    if args.task_command == "queue":
+        _write_output(kernel_json(enqueue_task(Path(args.workspace), args.task_id)), args.output)
+        return 0
+    if args.task_command == "run-next":
+        result = run_next_task(Path(args.workspace), timeout_seconds=args.timeout_seconds)
+        _write_output(kernel_json(result), args.output)
+        return 0 if result.state == "SUCCEEDED" else 22
+    if args.task_command == "events":
+        _write_output(kernel_json(kernel_list_events(Path(args.workspace), args.task_id)), args.output)
+        return 0
     if args.task_command == "cancel":
-        raise ValueError("task cancellation is not implemented in the vertical slice")
+        _write_output(kernel_json(kernel_cancel_task(Path(args.workspace), args.task_id, reason=args.reason)), args.output)
+        return 0
     raise ValueError(f"unknown task command: {args.task_command}")
 
 
@@ -783,11 +794,29 @@ def build_parser() -> argparse.ArgumentParser:
     task_item = task_subparsers.add_parser("run", help="Run an approved runtime task")
     task_item.add_argument("task_id")
     task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--timeout-seconds", type=int, default=30)
+    task_item.add_argument("--output", "-o")
+    task_item.set_defaults(handler=_handle_task)
+    task_item = task_subparsers.add_parser("queue", help="Queue an approved runtime task")
+    task_item.add_argument("task_id")
+    task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--output", "-o")
+    task_item.set_defaults(handler=_handle_task)
+    task_item = task_subparsers.add_parser("run-next", help="Run the next queued runtime task")
+    task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--timeout-seconds", type=int, default=30)
+    task_item.add_argument("--output", "-o")
+    task_item.set_defaults(handler=_handle_task)
+    task_item = task_subparsers.add_parser("events", help="List runtime task events")
+    task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--task-id")
     task_item.add_argument("--output", "-o")
     task_item.set_defaults(handler=_handle_task)
     task_item = task_subparsers.add_parser("cancel", help="Cancel a runtime task")
     task_item.add_argument("task_id")
     task_item.add_argument("--workspace", default=".")
+    task_item.add_argument("--reason", default="cancelled by user")
+    task_item.add_argument("--output", "-o")
     task_item.set_defaults(handler=_handle_task)
 
     item = subparsers.add_parser("kernel-approval", help="Approve runtime kernel tasks with signed approvals")

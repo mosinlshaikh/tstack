@@ -88,6 +88,17 @@ class KernelRollbackResult:
     verification: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class KernelEvent:
+    schema: str
+    event_id: str
+    task_id: str
+    event_type: str
+    state: str
+    message: str
+    timestamp_utc: str
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -132,6 +143,23 @@ def _sign(root: Path, payload: dict) -> str:
 def _inside(root: Path, target: Path) -> bool:
     resolved = target.expanduser().resolve()
     return resolved == root or root in resolved.parents
+
+
+def _record_event(db: sqlite3.Connection, task_id: str, event_type: str, state: str, message: str) -> KernelEvent:
+    timestamp = _now()
+    event_id = "EVT-" + _sha(f"{task_id}:{event_type}:{state}:{message}:{timestamp}")[:16]
+    db.execute(
+        "insert into events(event_id, task_id, event_type, state, message, created_at) values (?, ?, ?, ?, ?, ?)",
+        (event_id, task_id, event_type, state, message, timestamp),
+    )
+    return KernelEvent("tstack-kernel-event/v1", event_id, task_id, event_type, state, message, timestamp)
+
+
+def _set_state(db: sqlite3.Connection, task_id: str, state: str, message: str) -> None:
+    if state not in TASK_STATES:
+        raise ValueError("invalid task state")
+    db.execute("update tasks set state = ?, updated_at = ? where task_id = ?", (state, _now(), task_id))
+    _record_event(db, task_id, "state", state, message)
 
 
 def init_workspace(path: Path) -> KernelWorkspace:
@@ -190,6 +218,14 @@ def init_workspace(path: Path) -> KernelWorkspace:
               existed integer not null,
               created_at text not null
             );
+            create table if not exists events (
+              event_id text primary key,
+              task_id text not null,
+              event_type text not null,
+              state text not null,
+              message text not null,
+              created_at text not null
+            );
             """
         )
     return KernelWorkspace(KERNEL_SCHEMA, str(root), str(_db_path(root)), True)
@@ -211,6 +247,7 @@ def submit_task(root_path: Path, *, capability: str, target: str, content: str) 
             "insert or replace into tasks(task_id, capability, target, content, state, request_hash, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)",
             (task_id, capability, target, content, "WAITING_FOR_APPROVAL", request_hash, now, now),
         )
+        _record_event(db, task_id, "created", "WAITING_FOR_APPROVAL", "task submitted and waiting for approval")
     return KernelTask(TASK_SCHEMA, task_id, capability, target, content, "WAITING_FOR_APPROVAL", request_hash, True)
 
 
@@ -261,6 +298,40 @@ def list_tasks(root_path: Path) -> tuple[KernelTask, ...]:
     return tuple(get_task(root, row[0]) for row in rows)
 
 
+def list_events(root_path: Path, task_id: str | None = None) -> tuple[KernelEvent, ...]:
+    root = root_path.expanduser().resolve()
+    query = "select event_id, task_id, event_type, state, message, created_at from events"
+    params: tuple[str, ...] = ()
+    if task_id:
+        query += " where task_id = ?"
+        params = (task_id,)
+    query += " order by created_at, event_id"
+    with _connect(root) as db:
+        rows = db.execute(query, params).fetchall()
+    return tuple(KernelEvent("tstack-kernel-event/v1", row[0], row[1], row[2], row[3], row[4], row[5]) for row in rows)
+
+
+def enqueue_task(root_path: Path, task_id: str) -> KernelTask:
+    root = root_path.expanduser().resolve()
+    task = get_task(root, task_id)
+    if task.state != "WAITING_FOR_APPROVAL":
+        raise ValueError("only waiting tasks can be queued")
+    _verified_approval(root, task)
+    with _connect(root) as db:
+        _set_state(db, task_id, "QUEUED", "task queued for scheduler")
+    return get_task(root, task_id)
+
+
+def cancel_task(root_path: Path, task_id: str, *, reason: str = "cancelled by user") -> KernelTask:
+    root = root_path.expanduser().resolve()
+    task = get_task(root, task_id)
+    if task.state in {"SUCCEEDED", "FAILED", "ROLLED_BACK"}:
+        raise ValueError("terminal task cannot be cancelled")
+    with _connect(root) as db:
+        _set_state(db, task_id, "CANCELLED", reason)
+    return get_task(root, task_id)
+
+
 def _verified_approval(root: Path, task: KernelTask) -> SignedApproval:
     with _connect(root) as db:
         row = db.execute(
@@ -296,9 +367,16 @@ def _audit(root: Path, task: KernelTask, approval_id: str | None, status: str, o
     return record_hash
 
 
-def run_task(root_path: Path, task_id: str) -> KernelRunResult:
+def run_task(root_path: Path, task_id: str, *, timeout_seconds: int = 30) -> KernelRunResult:
     root = root_path.expanduser().resolve()
     task = get_task(root, task_id)
+    if timeout_seconds <= 0:
+        with _connect(root) as db:
+            _set_state(db, task_id, "FAILED", "task timed out before execution")
+        audit_hash = _audit(root, task, None, "FAILED", _sha(b"timeout"))
+        return KernelRunResult(KERNEL_SCHEMA, task.task_id, "FAILED", False, audit_hash, None, ("timeout enforced", "audit hash recorded"))
+    if task.state == "CANCELLED":
+        raise ValueError("cancelled task cannot run")
     approval = _verified_approval(root, task)
     target = (root / task.target).resolve()
     if not _inside(root, target):
@@ -310,11 +388,13 @@ def run_task(root_path: Path, task_id: str) -> KernelRunResult:
     snapshot_path = snapshots_dir / f"{snapshot_id}.bak" if existed else None
     if existed and snapshot_path:
         shutil.copy2(target, snapshot_path)
+    with _connect(root) as db:
+        _set_state(db, task_id, "RUNNING", "task execution started")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(task.content, encoding="utf-8")
     output_digest = _sha(target.read_bytes())
     with _connect(root) as db:
-        db.execute("update tasks set state = ?, updated_at = ? where task_id = ?", ("SUCCEEDED", _now(), task.task_id))
+        _set_state(db, task.task_id, "SUCCEEDED", "task execution succeeded")
         db.execute("update approvals set uses = uses + 1 where approval_id = ?", (approval.approval_id,))
         db.execute(
             "insert or replace into snapshots(snapshot_id, task_id, target, snapshot_path, existed, created_at) values (?, ?, ?, ?, ?, ?)",
@@ -322,6 +402,15 @@ def run_task(root_path: Path, task_id: str) -> KernelRunResult:
         )
     audit_hash = _audit(root, task, approval.approval_id, "SUCCEEDED", output_digest)
     return KernelRunResult(KERNEL_SCHEMA, task.task_id, "SUCCEEDED", True, audit_hash, str(snapshot_path) if snapshot_path else None, ("target written", "snapshot recorded", "audit hash recorded"))
+
+
+def run_next_task(root_path: Path, *, timeout_seconds: int = 30) -> KernelRunResult:
+    root = root_path.expanduser().resolve()
+    with _connect(root) as db:
+        row = db.execute("select task_id from tasks where state = ? order by created_at, task_id limit 1", ("QUEUED",)).fetchone()
+    if row is None:
+        raise ValueError("no queued task")
+    return run_task(root, row[0], timeout_seconds=timeout_seconds)
 
 
 def rollback_task(root_path: Path, task_id: str) -> KernelRollbackResult:
@@ -342,7 +431,7 @@ def rollback_task(root_path: Path, task_id: str) -> KernelRollbackResult:
             target.unlink()
         output_digest = _sha(b"deleted")
     with _connect(root) as db:
-        db.execute("update tasks set state = ?, updated_at = ? where task_id = ?", ("ROLLED_BACK", _now(), task.task_id))
+        _set_state(db, task.task_id, "ROLLED_BACK", "task rollback completed")
     audit_hash = _audit(root, task, None, "ROLLED_BACK", output_digest)
     return KernelRollbackResult(ROLLBACK_SCHEMA, task.task_id, True, "ROLLED_BACK", audit_hash, ("target restored", "rollback audit hash recorded"))
 
