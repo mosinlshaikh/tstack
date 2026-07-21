@@ -109,6 +109,14 @@ tstack execute plan approval.json decision.json
 tstack execute plan approval.json decision.json --target README.md --apply
 ```
 
+Runtime Kernel:
+
+```bash
+tstack runtime request filesystem.move "Organize Downloads" --target Downloads --format json
+tstack runtime decide request.json --approved --approver Mosin --reason "Reviewed plan." --format json
+tstack runtime audit request.json --decision decision.json --outcome approved --format json
+```
+
 ## Local Desktop OS
 
 TStack includes a local-first desktop Agentic OS blueprint for file, desktop, browser, code, voice, permission, audit, and rollback capabilities without external APIs by default.

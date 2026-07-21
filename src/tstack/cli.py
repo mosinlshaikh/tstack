@@ -25,6 +25,7 @@ from tstack.policy import baseline_json, default_policy_json, diff_json, diff_ma
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.reproducibility import compare_builds, receipt_json, repro_json, verify_attestation
+from tstack.runtime import approve_runtime_request, create_audit_event, create_runtime_request, runtime_json, runtime_markdown
 from tstack.scanner import report_json, report_markdown, scan_project
 from tstack.ssh import create_ssh_policy, load_ssh_policy, plan_ssh_command, ssh_plan_json, ssh_plan_markdown
 from tstack.supplychain import build_manifest, checksums_text, manifest_json, sbom_json, verify_manifest
@@ -182,6 +183,22 @@ def _handle_execute(args: argparse.Namespace) -> int:
         _write_output(executor_plan_json(plan) if args.format == "json" else executor_plan_markdown(plan), args.output)
         return 0 if plan.executable else 15
     raise ValueError(f"unknown execute command: {args.execute_command}")
+
+
+def _handle_runtime(args: argparse.Namespace) -> int:
+    if args.runtime_command == "request":
+        request = create_runtime_request(args.capability, args.intent, target=args.target, request_id=args.request_id)
+        _write_output(runtime_json(request) if args.format == "json" else runtime_markdown(request), args.output)
+        return 0
+    if args.runtime_command == "decide":
+        decision = approve_runtime_request(Path(args.request), approved=args.approved, approver=args.approver, reason=args.reason)
+        _write_output(runtime_json(decision) if args.format == "json" else runtime_markdown(decision), args.output)
+        return 0
+    if args.runtime_command == "audit":
+        event = create_audit_event(Path(args.request), Path(args.decision) if args.decision else None, outcome=args.outcome)
+        _write_output(runtime_json(event) if args.format == "json" else runtime_markdown(event), args.output)
+        return 0
+    raise ValueError(f"unknown runtime command: {args.runtime_command}")
 
 
 def _handle_desktop(args: argparse.Namespace) -> int:
@@ -570,6 +587,32 @@ def build_parser() -> argparse.ArgumentParser:
     execute_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     execute_item.add_argument("--output", "-o")
     execute_item.set_defaults(handler=_handle_execute)
+
+    item = subparsers.add_parser("runtime", help="Create capability-gated runtime kernel requests and audit records")
+    runtime_subparsers = item.add_subparsers(dest="runtime_command", required=True)
+    runtime_item = runtime_subparsers.add_parser("request", help="Create a hash-bound capability request")
+    runtime_item.add_argument("capability")
+    runtime_item.add_argument("intent")
+    runtime_item.add_argument("--target")
+    runtime_item.add_argument("--request-id", default="RUNTIME-0001")
+    runtime_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    runtime_item.add_argument("--output", "-o")
+    runtime_item.set_defaults(handler=_handle_runtime)
+    runtime_item = runtime_subparsers.add_parser("decide", help="Record a human decision bound to a runtime request hash")
+    runtime_item.add_argument("request")
+    runtime_item.add_argument("--approved", action="store_true")
+    runtime_item.add_argument("--approver", required=True)
+    runtime_item.add_argument("--reason", required=True)
+    runtime_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    runtime_item.add_argument("--output", "-o")
+    runtime_item.set_defaults(handler=_handle_runtime)
+    runtime_item = runtime_subparsers.add_parser("audit", help="Create a runtime audit event without executing OS actions")
+    runtime_item.add_argument("request")
+    runtime_item.add_argument("--decision")
+    runtime_item.add_argument("--outcome", default="planned")
+    runtime_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    runtime_item.add_argument("--output", "-o")
+    runtime_item.set_defaults(handler=_handle_runtime)
     item = subparsers.add_parser("desktop", help="Inspect local-first desktop Agentic OS blueprint")
     desktop_subparsers = item.add_subparsers(dest="desktop_command", required=True)
     desktop_item = desktop_subparsers.add_parser("blueprint", help="Show local-first desktop system architecture")
