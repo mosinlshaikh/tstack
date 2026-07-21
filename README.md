@@ -1,8 +1,6 @@
 # TStack
 
-**TStack** is the T Technology Research Lab evidence-driven engineering CLI for architecture workflows, repository auditing, framework-aware checks, policy enforcement, safe remediation, baselines, and release gates.
-
-## Lifecycle
+**TStack** is the T Technology Research Lab evidence-driven engineering CLI for architecture workflows, repository auditing, framework-aware checks, policy enforcement, safe remediation, extensible rules, and secure releases.
 
 `Idea → Architecture → Development → Review → QA → Security → Release → Maintenance`
 
@@ -16,7 +14,7 @@ cd tstack
 python -m pip install -e ".[dev]"
 ```
 
-## Core Commands
+## Core commands
 
 ```bash
 tstack --version
@@ -28,93 +26,59 @@ tstack fix .
 tstack fix . --apply
 ```
 
-## Policy as Code
-
-Create `.tstack/policy.json`:
+## Policy, baselines, and SARIF
 
 ```bash
 tstack policy-init .
-```
-
-Default policy:
-
-```json
-{
-  "fail_on": "critical",
-  "max_risk_score": 59,
-  "allow_rules": [],
-  "allow_paths": []
-}
-```
-
-Allowlisted findings remain visible in the audit trail but do not block the policy gate.
-
-## Baselines and Scan Diffs
-
-Capture accepted existing findings:
-
-```bash
 tstack baseline . --output .tstack/baseline.json
-```
-
-Detect only new and resolved findings:
-
-```bash
-tstack diff . --baseline .tstack/baseline.json
-tstack diff . --baseline .tstack/baseline.json --format json --fail-on-new
-```
-
-`--fail-on-new` exits with code `4` when new findings are introduced.
-
-## SARIF and GitHub Code Scanning
-
-```bash
+tstack diff . --baseline .tstack/baseline.json --fail-on-new
 tstack scan . --format sarif --output .tstack/tstack.sarif --fail-on never
 ```
 
-The SARIF output is compatible with GitHub code-scanning upload workflows. Secret values are never included in findings or SARIF messages.
+Policy allowlists keep suppressed findings visible in the audit trail. Baseline diff exits with code `4` when new findings are introduced. SARIF output is suitable for GitHub Code Scanning and never includes matched secret values.
 
-## Framework-Aware Scanner
+## Framework-aware scanner
 
-TStack evaluates:
+TStack evaluates Python, Node.js, Android/Kotlin, PHP, Go, and Rust projects. It checks manifests, lockfiles, tests, runtime constraints, CI, licensing, security policy, embedded-secret patterns, environment files, oversized sources, and reproducible dependency controls.
 
-- Python — project metadata, dependencies, tests, and runtime constraints
-- Node.js — package validity, lockfile, tests, static checks, and engine constraints
-- Android/Kotlin — Gradle wrapper, manifest, tests, SDK configuration, and shrinker rules
-- PHP — Composer metadata, lockfile, tests, and PHP constraints
-- Go — module metadata, checksums, tests, and version directive
-- Rust — Cargo metadata, lockfile, tests, and minimum toolchain version
+## Extensible rules
 
-It also checks repository controls, embedded-secret patterns, environment files, CI, licensing, security policy, test presence, oversized files, and reproducible dependencies.
+Projects can add non-executable JSON rules under `.tstack/rules/`. Installed Python packages can register scanners through the `tstack.rules` entry-point group.
 
-## Safe Remediation
+Projects may enforce `.tstack/plugin-trust.json` in `allowlist` mode. Installed plugins are matched by entry-point name and deterministic integrity **before their Python code is loaded**. See `docs/PLUGINS.md` and `docs/SUPPLY_CHAIN.md`.
 
-Dry run by default:
+## Safe remediation
 
 ```bash
-tstack fix .
-```
-
-Apply reversible controls:
-
-```bash
-tstack fix . --apply
+tstack fix .             # dry run
+tstack fix . --apply     # create reversible missing controls
 ```
 
 The remediation engine can generate `.gitignore`, `SECURITY.md`, and framework-aware GitHub Actions CI. It does not modify application source, credentials, dependency manifests, or lockfiles.
 
-## Verdicts and Exit Codes
+## Supply-chain release security
+
+```bash
+tstack sbom --output dist/sbom.cdx.json
+tstack manifest dist --checksums
+tstack verify dist
+```
+
+TStack produces a CycloneDX SBOM, deterministic SHA-256 artifact manifest, standard checksum file, and tamper verification. Tagged GitHub releases run tests, build wheel/source distributions, verify metadata, generate GitHub artifact attestations, and upload the complete release bundle.
+
+## Verdicts and exit codes
 
 - `PASS` — no material release blocker
 - `REVIEW` — engineering gaps require review
 - `HOLD` — critical evidence or accumulated risk blocks release
 - Exit `0` — command passed
 - Exit `1` — invalid input or operational error
-- Exit `2` — workflow contract validation failed
+- Exit `2` — workflow validation failed
 - Exit `3` — policy or scan release gate failed
 - Exit `4` — baseline diff introduced new findings
+- Exit `5` — release artifact verification failed
 
-## Repository Structure
+## Repository structure
 
 ```text
 tstack/
@@ -127,6 +91,8 @@ tstack/
 │   ├── frameworks.py
 │   ├── remediation.py
 │   ├── policy.py
+│   ├── plugins.py
+│   ├── supplychain.py
 │   └── cli.py
 ├── tests/
 ├── .github/workflows/
@@ -140,12 +106,12 @@ tstack/
 pytest
 tstack validate
 tstack scan . --fail-on hold
-tstack scan . --format sarif --output .tstack/tstack.sarif --fail-on never
+tstack sbom --output /tmp/tstack-sbom.json
 ```
 
 ## Status
 
-Current release stage: **0.5.0 alpha**.
+Current release stage: **0.7.0 alpha**.
 
 ## License
 
