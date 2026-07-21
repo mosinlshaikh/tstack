@@ -19,9 +19,29 @@ It is designed for web applications, Android apps, Windows desktop software, AI 
 - `security` — threat modelling, secrets, authentication, OWASP and dependency risks
 - `design` — UI/UX, accessibility, responsive behaviour and brand consistency
 - `ship` — versioning, changelog, deployment, rollback and post-release verification
-- `business` — scope, pricing, proposal, delivery risk and ROI
-- `ai-lab` — local AI, agents, RAG, voice and automation pipelines
-- `trading-lab` — market data integrity, backtesting, risk controls and paper trading
+
+## Install the CLI
+
+TStack currently supports Python 3.10 or newer.
+
+```bash
+git clone https://github.com/mosinlshaikh/tstack.git
+cd tstack
+python -m pip install -e ".[dev]"
+```
+
+## CLI Usage
+
+```bash
+tstack --version
+tstack list
+tstack architect
+tstack review
+tstack qa --output qa-workflow.md
+tstack ship
+```
+
+The current alpha CLI should be executed from inside the TStack repository checkout because workflow definitions are loaded from the `commands/` directory.
 
 ## Engineering Principles
 
@@ -38,15 +58,27 @@ It is designed for web applications, Android apps, Windows desktop software, AI 
 tstack/
 ├── commands/                 # Reusable AI engineering workflows
 ├── docs/                     # Architecture and operating documentation
-├── templates/                # Project, review and release templates
+├── src/tstack/               # Python CLI package
+├── tests/                    # CLI regression tests
 ├── .github/workflows/        # Repository validation automation
+├── pyproject.toml
 ├── CONTRIBUTING.md
 └── README.md
 ```
 
+## Development Validation
+
+```bash
+pytest
+tstack list
+tstack architect --output /tmp/architect.md
+```
+
+GitHub Actions validates Python 3.10, 3.11, and 3.12 on every push and pull request to `main`.
+
 ## Status
 
-TStack is under active development by **T Technology Research Lab**.
+TStack is under active development by **T Technology Research Lab**. Current release stage: **0.1.0 alpha**.
 
 ## License
 
