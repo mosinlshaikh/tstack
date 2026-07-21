@@ -166,6 +166,13 @@ tstack file inventory ~/Downloads --format json
 tstack file organize-plan ~/Downloads
 ```
 
+Approved file transactions:
+
+```bash
+tstack file-runtime apply plan.json request.json decision.json --apply --manifest transaction.json
+tstack file-runtime undo transaction.json
+```
+
 Bug Finder:
 
 ```bash

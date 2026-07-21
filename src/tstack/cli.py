@@ -17,6 +17,7 @@ from tstack.desktop import desktop_blueprint_json, desktop_blueprint_markdown
 from tstack.executor import apply_execution, execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, execution_result_json, execution_result_markdown, plan_execution
 from tstack.environment import environment_json, environment_markdown, inspect_environment
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
+from tstack.file_runtime import apply_file_transaction, file_transaction_json, file_transaction_markdown, undo_file_transaction
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
@@ -253,6 +254,18 @@ def _handle_file(args: argparse.Namespace) -> int:
         _write_output(organize_plan_json(plan) if args.format == "json" else organize_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown file command: {args.file_command}")
+
+
+def _handle_file_runtime(args: argparse.Namespace) -> int:
+    if args.file_runtime_command == "apply":
+        result = apply_file_transaction(Path(args.plan), Path(args.request), Path(args.decision), dry_run=not args.apply, manifest=Path(args.manifest) if args.manifest else None)
+        _write_output(file_transaction_json(result) if args.format == "json" else file_transaction_markdown(result), args.output)
+        return 0
+    if args.file_runtime_command == "undo":
+        result = undo_file_transaction(Path(args.manifest))
+        _write_output(file_transaction_json(result) if args.format == "json" else file_transaction_markdown(result), args.output)
+        return 0
+    raise ValueError(f"unknown file-runtime command: {args.file_runtime_command}")
 
 
 def _handle_bug(args: argparse.Namespace) -> int:
@@ -671,6 +684,24 @@ def build_parser() -> argparse.ArgumentParser:
     file_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     file_item.add_argument("--output", "-o")
     file_item.set_defaults(handler=_handle_file)
+
+    item = subparsers.add_parser("file-runtime", help="Apply and undo approved file organization transactions")
+    file_runtime_subparsers = item.add_subparsers(dest="file_runtime_command", required=True)
+    file_runtime_item = file_runtime_subparsers.add_parser("apply", help="Dry-run or apply an approved file move plan")
+    file_runtime_item.add_argument("plan")
+    file_runtime_item.add_argument("request")
+    file_runtime_item.add_argument("decision")
+    file_runtime_item.add_argument("--apply", action="store_true")
+    file_runtime_item.add_argument("--manifest")
+    file_runtime_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    file_runtime_item.add_argument("--output", "-o")
+    file_runtime_item.set_defaults(handler=_handle_file_runtime)
+    file_runtime_item = file_runtime_subparsers.add_parser("undo", help="Undo an applied file transaction from its manifest")
+    file_runtime_item.add_argument("manifest")
+    file_runtime_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    file_runtime_item.add_argument("--output", "-o")
+    file_runtime_item.set_defaults(handler=_handle_file_runtime)
+
     item = subparsers.add_parser("bug", help="Find bugs and route fix plans to responsible agents")
     bug_subparsers = item.add_subparsers(dest="bug_command", required=True)
     bug_item = bug_subparsers.add_parser("find", help="Create a bug report from scan findings and optional failure text")
