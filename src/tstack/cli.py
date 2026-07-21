@@ -8,6 +8,7 @@ from pathlib import Path
 from tstack import __version__
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
+from tstack.knowledge import get_pack, list_packs, pack_json, pack_markdown, packs_json, packs_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
@@ -63,6 +64,18 @@ def _handle_validate(args: argparse.Namespace) -> int:
         lines.append(f"Verdict: {'PASS' if all(item.valid for item in results) else 'FAIL'}")
         _write_output("\n".join(lines), args.output)
     return 0 if all(item.valid for item in results) else 2
+
+
+def _handle_knowledge(args: argparse.Namespace) -> int:
+    if args.knowledge_command == "list":
+        packs = list_packs()
+        _write_output(packs_json(packs) if args.format == "json" else packs_markdown(packs), args.output)
+        return 0
+    if args.knowledge_command == "show":
+        pack = get_pack(args.pack_id)
+        _write_output(pack_json(pack) if args.format == "json" else pack_markdown(pack), args.output)
+        return 0
+    raise ValueError(f"unknown knowledge command: {args.knowledge_command}")
 
 
 def _scan(args: argparse.Namespace):
@@ -212,6 +225,17 @@ def build_parser() -> argparse.ArgumentParser:
     item = subparsers.add_parser("list", help="List available workflows"); item.set_defaults(handler=_handle_list)
     item = subparsers.add_parser("init", help="Initialize TStack in a project"); item.add_argument("path", nargs="?", default="."); item.add_argument("--force", action="store_true"); item.set_defaults(handler=_handle_init)
     item = subparsers.add_parser("validate", help="Validate packaged workflow contracts"); item.add_argument("--json", action="store_true"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_validate)
+    item = subparsers.add_parser("knowledge", help="Inspect registered engineering knowledge packs")
+    knowledge_subparsers = item.add_subparsers(dest="knowledge_command", required=True)
+    knowledge_item = knowledge_subparsers.add_parser("list", help="List registered knowledge packs")
+    knowledge_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    knowledge_item.add_argument("--output", "-o")
+    knowledge_item.set_defaults(handler=_handle_knowledge)
+    knowledge_item = knowledge_subparsers.add_parser("show", help="Show a registered knowledge pack summary")
+    knowledge_item.add_argument("pack_id")
+    knowledge_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    knowledge_item.add_argument("--output", "-o")
+    knowledge_item.set_defaults(handler=_handle_knowledge)
     item = subparsers.add_parser("scan", help="Audit a project and enforce policy"); _add_scan_limits(item); item.add_argument("--format", choices=("markdown", "json", "sarif"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--policy"); item.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold"); item.set_defaults(handler=_handle_scan)
     _add_platform_parser(subparsers, "platform-audit", "all", "Audit Docker and Kubernetes security controls")
     _add_platform_parser(subparsers, "docker-audit", "docker", "Audit Dockerfile security and reproducibility")

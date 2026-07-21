@@ -35,6 +35,34 @@ def test_validate_json_is_machine_readable(capsys) -> None:
     assert len(payload["results"]) == len(WORKFLOWS)
 
 
+def test_knowledge_list_command_outputs_registered_packs(capsys) -> None:
+    assert main(["knowledge", "list"]) == 0
+    output = capsys.readouterr().out
+    assert "TStack Knowledge Packs" in output
+    assert "language-python" in output
+    assert "language-rust" in output
+
+
+def test_knowledge_show_command_outputs_pack_summary(capsys) -> None:
+    assert main(["knowledge", "show", "language-python"]) == 0
+    output = capsys.readouterr().out
+    assert "Python Language Pack" in output
+    assert "overview" in output
+    assert "security" in output
+
+
+def test_knowledge_list_json_is_machine_readable(capsys) -> None:
+    assert main(["knowledge", "list", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-knowledge-list/v1"
+    assert any(pack["id"] == "language-python" for pack in payload["packs"])
+
+
+def test_knowledge_unknown_pack_fails(capsys) -> None:
+    assert main(["knowledge", "show", "language-missing"]) == 1
+    assert "unknown knowledge pack" in capsys.readouterr().err
+
+
 def test_init_creates_project_contract(tmp_path, capsys) -> None:
     assert main(["init", str(tmp_path)]) == 0
     assert (tmp_path / ".tstack" / "config.json").is_file()
