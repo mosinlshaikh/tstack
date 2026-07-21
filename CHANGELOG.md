@@ -2,6 +2,7 @@
 
 ## 0.18.0a1 - Unreleased
 
+- Added strict proprietary source-available license and donation/sponsorship documentation.
 - Added SQLite-backed runtime kernel vertical slice.
 - Added persisted task events, queue transition, run-next scheduler foundation, cancellation, and timeout failure path.
 - Added daemon start/status foundation backed by SQLite workspace health, queue counts, and audit validation.

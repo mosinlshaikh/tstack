@@ -347,4 +347,20 @@ Current release stage: **0.18.0a1 experimental runtime-kernel branch**.
 
 ## License
 
-A public license will be selected before the first stable release.
+TStack is released under the **TStack Proprietary Source-Available License**.
+
+You may view the source for evaluation and contribution review. You may not copy,
+redistribute, modify for independent use, use in production, sell, host, or use
+commercially without written permission from T Technology Research Lab.
+
+See [LICENSE](LICENSE) for the complete terms.
+
+## Donations
+
+Development can be supported through GitHub Sponsors:
+
+- GitHub Sponsors: `mosinlshaikh`
+
+Donations support development but do not grant commercial, production,
+redistribution, private support, warranty, or trademark rights. See
+[DONATIONS.md](DONATIONS.md).

@@ -1,9 +1,71 @@
-Proprietary License
+TStack Proprietary Source-Available License
 
 Copyright (c) T Technology Research Lab.
-
 All rights reserved.
 
-This repository is proprietary until the maintainers select and publish a public open-source license. You may view and evaluate the source code only with permission from the copyright holder. You may not copy, modify, distribute, sublicense, sell, or use this software in production without written permission.
+This repository is source-available, not open source.
 
-No warranty is provided. The software is provided as-is, without express or implied warranties, including warranties of merchantability, fitness for a particular purpose, and non-infringement.
+1. Permission Granted
+
+You may view the source code for personal evaluation, security review, research,
+or contribution review only.
+
+2. Restrictions
+
+Without prior written permission from T Technology Research Lab, you may not:
+
+- copy, redistribute, publish, mirror, or re-upload this software;
+- modify, adapt, fork for independent use, or create derivative works;
+- sell, rent, sublicense, host, provide as a service, or commercially exploit
+  this software;
+- use this software in production, client work, business operations, or paid
+  services;
+- remove copyright, license, attribution, safety, or provenance notices;
+- use project names, trademarks, logos, or branding in a way that suggests
+  endorsement or ownership;
+- train, fine-tune, evaluate, or benchmark an AI model on this repository for
+  commercial use without written permission.
+
+3. Contributions
+
+By submitting a pull request, patch, issue attachment, or other contribution,
+you grant T Technology Research Lab a perpetual, worldwide, royalty-free license
+to use, modify, reproduce, sublicense, and distribute that contribution as part
+of TStack and related products. This does not transfer ownership of your
+separate original work.
+
+4. Commercial Licensing
+
+Commercial, production, redistribution, hosted-service, enterprise, OEM,
+white-label, government, or training-data use requires a separate written
+license from T Technology Research Lab.
+
+5. Donations and Sponsorship
+
+Donations and sponsorships support development but do not grant commercial,
+production, redistribution, trademark, support, warranty, or private-access
+rights unless a separate written agreement says so.
+
+6. No Warranty
+
+The software is provided "as is" without warranty of any kind, express or
+implied, including warranties of merchantability, fitness for a particular
+purpose, non-infringement, availability, security, or correctness.
+
+7. Limitation of Liability
+
+To the maximum extent permitted by law, T Technology Research Lab and its
+contributors are not liable for any claim, damage, loss, or other liability
+arising from use, evaluation, inability to use, or reliance on this software.
+
+8. Termination
+
+Any violation of this license automatically terminates all permissions granted
+to you. Upon termination, you must stop using the software and delete all copies
+under your control.
+
+9. Governing Terms
+
+If you have a separate signed agreement with T Technology Research Lab, that
+agreement controls for the scope it covers. Otherwise, this license is the full
+permission grant for this repository.
