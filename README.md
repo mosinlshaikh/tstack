@@ -1,6 +1,6 @@
 # TStack
 
-**TStack** is the T Technology Research Lab workflow and project-audit system for planning, building, reviewing, testing, securing, and releasing software with evidence-driven engineering controls.
+**TStack** is the T Technology Research Lab workflow, project-audit, and safe-remediation system for planning, building, reviewing, testing, securing, and releasing software with evidence-driven engineering controls.
 
 ## Purpose
 
@@ -41,11 +41,13 @@ tstack architect
 tstack scan .
 tstack scan . --format json --output .tstack/audit.json
 tstack scan . --fail-on review
+tstack fix .
+tstack fix . --apply
 ```
 
 ## Framework-Aware Scanner
 
-TStack v0.3.0 detects and evaluates:
+TStack detects and evaluates:
 
 - **Python** — project configuration, dependency manifests, tests, and runtime constraints
 - **Node.js** — manifest validity, lockfile, tests, static checks, and engine constraints
@@ -55,6 +57,27 @@ TStack v0.3.0 detects and evaluates:
 - **Rust** — Cargo manifest and lockfile, tests, and minimum Rust version
 
 The scanner also checks repository-wide controls, source inventory, embedded-secret patterns, sensitive environment files, oversized source files, CI presence, license, security policy, tests, and dependency reproducibility.
+
+## Safe Remediation
+
+`tstack fix` defaults to a dry run and prepares only reversible, low-risk controls:
+
+- framework-aware `.gitignore`
+- `SECURITY.md` responsible-disclosure policy
+- minimum-permission GitHub Actions CI workflow
+
+```bash
+# Inspect proposed changes without writing files
+tstack fix .
+
+# Machine-readable plan
+tstack fix . --format json
+
+# Apply only missing controls
+tstack fix . --apply
+```
+
+Existing files are preserved. Application code, credentials, dependency manifests, lockfiles, and business logic are never modified by the remediation engine. `--force` must be explicitly supplied before a selected existing file may be replaced.
 
 ## Audit Verdicts
 
@@ -75,8 +98,9 @@ tstack/
 │   ├── core.py               # Workflow loading, validation, and initialization
 │   ├── scanner.py            # Deterministic repository scanner
 │   ├── frameworks.py         # Ecosystem-aware deep checks
+│   ├── remediation.py        # Safe remediation planning and application
 │   └── cli.py                # Command-line interface
-├── tests/                    # Regression and framework fixtures
+├── tests/                    # Regression, framework, and safety fixtures
 ├── .github/workflows/        # CI validation
 ├── pyproject.toml
 ├── CONTRIBUTING.md
@@ -89,6 +113,7 @@ tstack/
 pytest
 tstack validate
 tstack scan . --fail-on hold
+tstack fix .
 ```
 
 GitHub Actions validates supported Python versions on every push and pull request to `main`.
@@ -104,7 +129,7 @@ GitHub Actions validates supported Python versions on every push and pull reques
 
 ## Status
 
-TStack is under active development by **T Technology Research Lab**. Current release stage: **0.3.0 alpha**.
+TStack is under active development by **T Technology Research Lab**. Current release stage: **0.4.0 alpha**.
 
 ## License
 
