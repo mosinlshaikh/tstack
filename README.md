@@ -85,6 +85,17 @@ tstack agent plan "Build a SaaS CRM" --format json
 
 Current mode is **plan-only**. It does not scrape private sources, edit code, run SSH, or deploy without explicit future approval controls.
 
+## Human Language Understanding
+
+TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions.
+
+```bash
+tstack human languages
+tstack human intent "scrap se deploment tak sabkuch handel karo aur ui ux desing bhi"
+```
+
+The parser may infer intent, but execution remains approval-gated.
+
 ## SSH Planning
 
 TStack can create policy-checked SSH command plans without executing remote commands.

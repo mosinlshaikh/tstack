@@ -10,6 +10,7 @@ from tstack.agentic import agent_plan_json, agent_plan_markdown, build_agent_pla
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
+from tstack.human_language import human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
@@ -118,6 +119,17 @@ def _handle_agent(args: argparse.Namespace) -> int:
         _write_output(agent_plan_json(plan) if args.format == "json" else agent_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown agent command: {args.agent_command}")
+
+
+def _handle_human(args: argparse.Namespace) -> int:
+    if args.human_command == "languages":
+        _write_output(human_languages_json() if args.format == "json" else human_languages_markdown(), args.output)
+        return 0
+    if args.human_command == "intent":
+        parsed = parse_intent(args.text)
+        _write_output(intent_json(parsed) if args.format == "json" else intent_markdown(parsed), args.output)
+        return 0
+    raise ValueError(f"unknown human command: {args.human_command}")
 
 
 def _scan(args: argparse.Namespace):
@@ -334,6 +346,17 @@ def build_parser() -> argparse.ArgumentParser:
     agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     agent_item.add_argument("--output", "-o")
     agent_item.set_defaults(handler=_handle_agent)
+    item = subparsers.add_parser("human", help="Parse human language and typo-tolerant user intent")
+    human_subparsers = item.add_subparsers(dest="human_command", required=True)
+    human_item = human_subparsers.add_parser("languages", help="List supported human language registry")
+    human_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    human_item.add_argument("--output", "-o")
+    human_item.set_defaults(handler=_handle_human)
+    human_item = human_subparsers.add_parser("intent", help="Parse typo-tolerant human instruction into a safe command suggestion")
+    human_item.add_argument("text")
+    human_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    human_item.add_argument("--output", "-o")
+    human_item.set_defaults(handler=_handle_human)
     item = subparsers.add_parser("scan", help="Audit a project and enforce policy"); _add_scan_limits(item); item.add_argument("--format", choices=("markdown", "json", "sarif"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--policy"); item.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold"); item.set_defaults(handler=_handle_scan)
     _add_platform_parser(subparsers, "platform-audit", "all", "Audit Docker and Kubernetes security controls")
     _add_platform_parser(subparsers, "docker-audit", "docker", "Audit Dockerfile security and reproducibility")
