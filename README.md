@@ -1,28 +1,27 @@
 # TStack
 
-**TStack** is the T Technology Research Lab workflow system for planning, building, reviewing, testing, securing, and releasing software with AI-assisted engineering.
+**TStack** is the T Technology Research Lab evidence-driven workflow and project-audit system for planning, building, reviewing, testing, securing, and releasing software.
 
-## Purpose
-
-TStack standardizes the complete software lifecycle:
+## Lifecycle
 
 `Idea → Architecture → Development → Review → QA → Security → Release → Maintenance`
 
-It is designed for web applications, Android apps, Windows desktop software, AI agents, automation systems, and quantitative/trading research projects.
+TStack supports web applications, Android apps, Windows software, AI agents, automation systems, and quantitative or trading research projects.
 
-## Core Workflows
+## Capabilities
 
-- `architect` — requirements, system boundaries, data flow, APIs, scalability and trade-offs
-- `build` — implementation planning and production-grade development
-- `review` — correctness, maintainability, technical debt and regression analysis
-- `qa` — test strategy, edge cases, acceptance checks and release confidence
-- `security` — threat modelling, secrets, authentication, OWASP and dependency risks
-- `design` — UI/UX, accessibility, responsive behaviour and brand consistency
-- `ship` — versioning, changelog, deployment, rollback and post-release verification
+- Packaged engineering workflows: `architect`, `build`, `review`, `qa`, `security`, `design`, `ship`
+- Project initialization through `.tstack/`
+- Workflow contract validation
+- Deterministic project inventory and fingerprinting
+- Language and engineering-control detection
+- Secret-pattern heuristics that never print matched credentials
+- Markdown and machine-readable JSON audit reports
+- CI-compatible PASS, REVIEW, and HOLD verdicts
 
-## Install the CLI
+## Install
 
-TStack currently supports Python 3.10 or newer.
+TStack requires Python 3.10 or newer.
 
 ```bash
 git clone https://github.com/mosinlshaikh/tstack.git
@@ -30,18 +29,49 @@ cd tstack
 python -m pip install -e ".[dev]"
 ```
 
-## CLI Usage
+## Core Usage
 
 ```bash
 tstack --version
 tstack list
+tstack validate
+tstack init ./my-project
 tstack architect
-tstack review
-tstack qa --output qa-workflow.md
-tstack ship
+tstack review --output review-workflow.md
 ```
 
-The current alpha CLI should be executed from inside the TStack repository checkout because workflow definitions are loaded from the `commands/` directory.
+## Project Audit Engine
+
+Scan a repository and print a Markdown audit:
+
+```bash
+tstack scan .
+```
+
+Generate JSON for automation:
+
+```bash
+tstack scan . --format json --output .tstack/audit.json
+```
+
+Control CI behavior:
+
+```bash
+# Non-zero only for HOLD
+tstack scan . --fail-on hold
+
+# Non-zero for REVIEW or HOLD
+tstack scan . --fail-on review
+
+# Always return zero while still producing a report
+tstack scan . --fail-on never
+```
+
+Exit code `3` means the selected risk threshold was reached. A critical finding or risk score of 60 or higher produces `HOLD`.
+
+## Scanner Boundaries
+
+The scanner is deterministic and dependency-free. It excludes common generated directories, skips symlinks, caps file count and individual file size, and records a SHA-256 project fingerprint. Secret checks are heuristic indicators, not proof; all findings require verification before remediation.
 
 ## Engineering Principles
 
@@ -50,17 +80,18 @@ The current alpha CLI should be executed from inside the TStack repository check
 3. Preserve user data and production stability.
 4. Prefer minimal, reversible changes.
 5. Security and observability are release requirements.
-6. Every release must have validation and rollback steps.
+6. Every release requires validation and rollback steps.
+7. Critical uncertainty produces HOLD, not fabricated confidence.
 
 ## Repository Structure
 
 ```text
 tstack/
-├── commands/                 # Reusable AI engineering workflows
+├── commands/                 # Human-readable workflow sources
 ├── docs/                     # Architecture and operating documentation
-├── src/tstack/               # Python CLI package
-├── tests/                    # CLI regression tests
-├── .github/workflows/        # Repository validation automation
+├── src/tstack/               # Packaged CLI, workflow, and scanner engines
+├── tests/                    # Regression and scanner contract tests
+├── .github/workflows/        # Multi-version CI validation
 ├── pyproject.toml
 ├── CONTRIBUTING.md
 └── README.md
@@ -70,15 +101,15 @@ tstack/
 
 ```bash
 pytest
-tstack list
-tstack architect --output /tmp/architect.md
+tstack validate
+tstack scan . --format json --fail-on never
 ```
 
-GitHub Actions validates Python 3.10, 3.11, and 3.12 on every push and pull request to `main`.
+GitHub Actions validates supported Python versions on pushes and pull requests to `main`.
 
 ## Status
 
-TStack is under active development by **T Technology Research Lab**. Current release stage: **0.1.0 alpha**.
+TStack is under active development by **T Technology Research Lab**. Current release stage: **0.2.0 alpha**.
 
 ## License
 
