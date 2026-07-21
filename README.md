@@ -133,6 +133,7 @@ tstack task run-next
 tstack task run TASK_ID
 tstack task events --task-id TASK_ID
 tstack task cancel TASK_ID --reason "not needed"
+tstack worker run --workers 2
 tstack kernel-audit verify
 tstack kernel-rollback apply TASK_ID
 ```

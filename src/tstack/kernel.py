@@ -123,6 +123,20 @@ class KernelRecoveryResult:
     audit_hashes: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class KernelWorkerRun:
+    schema: str
+    workspace: str
+    requested_workers: int
+    effective_workers: int
+    tasks_attempted: int
+    succeeded: int
+    failed: int
+    remaining_queued: int
+    mode: str
+    task_ids: tuple[str, ...]
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -494,6 +508,51 @@ def run_next_task(root_path: Path, *, timeout_seconds: int = 30) -> KernelRunRes
     if row is None:
         raise ValueError("no queued task")
     return run_task(root, row[0], timeout_seconds=timeout_seconds)
+
+
+def run_worker_pool(root_path: Path, *, workers: int = 1, limit: int | None = None, timeout_seconds: int = 30) -> KernelWorkerRun:
+    if workers <= 0:
+        raise ValueError("workers must be positive")
+    root = root_path.expanduser().resolve()
+    effective_workers = min(workers, 32)
+    attempted = succeeded = failed = 0
+    task_ids: list[str] = []
+    max_tasks = limit if limit is not None else 10_000
+    while attempted < max_tasks:
+        with _connect(root) as db:
+            row = db.execute("select task_id from tasks where state = ? order by created_at, task_id limit 1", ("QUEUED",)).fetchone()
+        if row is None:
+            break
+        task_id = row[0]
+        task_ids.append(task_id)
+        attempted += 1
+        try:
+            result = run_task(root, task_id, timeout_seconds=timeout_seconds)
+        except Exception:
+            task = get_task(root, task_id)
+            with _connect(root) as db:
+                _set_state(db, task_id, "FAILED", "worker execution failed")
+            _audit(root, task, None, "FAILED", _sha(b"worker-failure"))
+            failed += 1
+            continue
+        if result.state == "SUCCEEDED":
+            succeeded += 1
+        else:
+            failed += 1
+    with _connect(root) as db:
+        remaining = db.execute("select count(*) from tasks where state = ?", ("QUEUED",)).fetchone()[0]
+    return KernelWorkerRun(
+        "tstack-kernel-worker-run/v1",
+        str(root),
+        workers,
+        effective_workers,
+        attempted,
+        succeeded,
+        failed,
+        int(remaining),
+        "same-process-bounded-simulation",
+        tuple(task_ids),
+    )
 
 
 def rollback_task(root_path: Path, task_id: str) -> KernelRollbackResult:

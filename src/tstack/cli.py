@@ -20,7 +20,7 @@ from tstack.environment import environment_json, environment_markdown, inspect_e
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.file_runtime import apply_file_transaction, file_transaction_json, file_transaction_markdown, undo_file_transaction
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
-from tstack.kernel import approve_task, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, recover_stuck_tasks, rollback_task, run_next_task, run_task, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, recover_stuck_tasks, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
 from tstack.mastery import level_10_mastery_profile, mastery_json, mastery_markdown
@@ -314,6 +314,14 @@ def _handle_kernel_audit(args: argparse.Namespace) -> int:
         _write_output(json.dumps({"schema": "tstack-kernel-audit-verification/v1", "valid": valid}, indent=2, sort_keys=True) + "\n", args.output)
         return 0 if valid else 21
     raise ValueError(f"unknown kernel audit command: {args.kernel_audit_command}")
+
+
+def _handle_worker(args: argparse.Namespace) -> int:
+    if args.worker_command == "run":
+        result = run_worker_pool(Path(args.workspace), workers=args.workers, limit=args.limit, timeout_seconds=args.timeout_seconds)
+        _write_output(kernel_json(result), args.output)
+        return 0 if result.failed == 0 else 24
+    raise ValueError(f"unknown worker command: {args.worker_command}")
 
 
 def _handle_desktop(args: argparse.Namespace) -> int:
@@ -876,6 +884,16 @@ def build_parser() -> argparse.ArgumentParser:
     audit_item.add_argument("--workspace", default=".")
     audit_item.add_argument("--output", "-o")
     audit_item.set_defaults(handler=_handle_kernel_audit)
+
+    item = subparsers.add_parser("worker", help="Run bounded same-process worker pool over queued tasks")
+    worker_subparsers = item.add_subparsers(dest="worker_command", required=True)
+    worker_item = worker_subparsers.add_parser("run", help="Process queued tasks with bounded same-process workers")
+    worker_item.add_argument("--workspace", default=".")
+    worker_item.add_argument("--workers", type=int, default=1)
+    worker_item.add_argument("--limit", type=int)
+    worker_item.add_argument("--timeout-seconds", type=int, default=30)
+    worker_item.add_argument("--output", "-o")
+    worker_item.set_defaults(handler=_handle_worker)
 
     item = subparsers.add_parser("desktop", help="Inspect local-first desktop Agentic OS blueprint")
     desktop_subparsers = item.add_subparsers(dest="desktop_command", required=True)

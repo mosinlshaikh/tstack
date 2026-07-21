@@ -6,6 +6,7 @@
 - Added persisted task events, queue transition, run-next scheduler foundation, cancellation, and timeout failure path.
 - Added daemon start/status foundation backed by SQLite workspace health, queue counts, and audit validation.
 - Added explicit restart recovery for stale `RUNNING` tasks with fail/requeue policies.
+- Added same-process bounded worker pool simulation for queued tasks.
 - Added signed task approvals using workspace-local HMAC keys.
 - Added task persistence, approved filesystem write execution, snapshots, audit-chain records, and rollback.
 - Added controlled sandbox runner bound to runtime approval.

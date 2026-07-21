@@ -4,7 +4,7 @@ import sqlite3
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, recover_stuck_tasks, rollback_task, run_next_task, run_task, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, recover_stuck_tasks, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -116,6 +116,35 @@ def test_daemon_recovery_can_requeue_stale_running_tasks(tmp_path) -> None:
     assert verify_audit_chain(tmp_path) is True
 
 
+def test_worker_pool_processes_queued_tasks(tmp_path) -> None:
+    init_workspace(tmp_path)
+    for index in range(3):
+        task = submit_task(tmp_path, capability="filesystem.write", target=f"file-{index}.txt", content=str(index))
+        approve_task(tmp_path, task.task_id, actor="Mosin")
+        enqueue_task(tmp_path, task.task_id)
+    result = run_worker_pool(tmp_path, workers=2)
+    assert result.schema == "tstack-kernel-worker-run/v1"
+    assert result.requested_workers == 2
+    assert result.effective_workers == 2
+    assert result.tasks_attempted == 3
+    assert result.succeeded == 3
+    assert result.failed == 0
+    assert result.remaining_queued == 0
+    assert result.mode == "same-process-bounded-simulation"
+    assert verify_audit_chain(tmp_path) is True
+
+
+def test_worker_pool_respects_limit(tmp_path) -> None:
+    init_workspace(tmp_path)
+    for index in range(3):
+        task = submit_task(tmp_path, capability="filesystem.write", target=f"limited-{index}.txt", content=str(index))
+        approve_task(tmp_path, task.task_id, actor="Mosin")
+        enqueue_task(tmp_path, task.task_id)
+    result = run_worker_pool(tmp_path, workers=4, limit=2)
+    assert result.tasks_attempted == 2
+    assert result.remaining_queued == 1
+
+
 def test_kernel_timeout_marks_task_failed(tmp_path) -> None:
     init_workspace(tmp_path)
     task = submit_task(tmp_path, capability="filesystem.write", target="note.txt", content="after")
@@ -204,3 +233,16 @@ def test_daemon_cli_recover(tmp_path, capsys) -> None:
     assert payload["schema"] == "tstack-kernel-recovery-result/v1"
     assert payload["recovered"] == 1
     assert get_task(workspace, task.task_id).state == "FAILED"
+
+
+def test_worker_cli_run(tmp_path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    init_workspace(workspace)
+    task = submit_task(workspace, capability="filesystem.write", target="worker.txt", content="done")
+    approve_task(workspace, task.task_id, actor="Mosin")
+    enqueue_task(workspace, task.task_id)
+    assert main(["worker", "run", "--workspace", str(workspace), "--workers", "2"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-kernel-worker-run/v1"
+    assert payload["succeeded"] == 1
+    assert (workspace / "worker.txt").read_text(encoding="utf-8") == "done"

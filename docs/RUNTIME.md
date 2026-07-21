@@ -16,6 +16,7 @@ tstack task run-next
 tstack task run TASK_ID
 tstack task events --task-id TASK_ID
 tstack task cancel TASK_ID --reason "not needed"
+tstack worker run --workers 2
 tstack kernel-audit verify
 tstack kernel-rollback apply TASK_ID
 ```
@@ -32,6 +33,7 @@ tstack kernel-rollback apply TASK_ID
 - Cancellation for non-terminal tasks
 - Timeout failure path
 - Restart recovery for stale `RUNNING` tasks with `fail` or `requeue` policy
+- Same-process bounded worker pool simulation over queued tasks
 - Signed approval records
 - Approval replay prevention through `max_uses`
 - Approved `filesystem.write` execution
@@ -42,7 +44,7 @@ tstack kernel-rollback apply TASK_ID
 ## Current Limits
 
 - No background daemon process yet
-- No worker pool yet
+- Worker command is same-process simulation, not distributed execution
 - Recovery is explicit via `tstack daemon recover`; it is not automatic until a daemon loop exists
 - Only `filesystem.write` is executable in this vertical slice
 - Signing is workspace-local HMAC, not asymmetric public-key approval
