@@ -9,6 +9,8 @@ from tstack.supplychain import build_manifest, checksums_text, manifest_json
 from tstack.trustgate import evaluate_release_trust
 
 COMMIT = "a" * 40
+REPOSITORY = "mosinlshaikh/tstack"
+WORKFLOW = ".github/workflows/release.yml"
 
 
 def _release_bundle(root) -> None:
@@ -20,12 +22,25 @@ def _release_bundle(root) -> None:
     (root / "checksums.sha3-256").write_text(checksums_text(manifest, "sha3-256"), encoding="utf-8")
 
 
+def _valid_receipt() -> dict:
+    return {
+        "schema": "tstack-attestation-receipt/v1",
+        "verified": True,
+        "artifact": "package.whl",
+        "repository": REPOSITORY,
+        "workflow": WORKFLOW,
+        "source_digest": COMMIT,
+        "deny_self_hosted_runners": True,
+        "verification_results": [{"verified": True}],
+    }
+
+
 def test_trust_gate_passes_complete_bundle(tmp_path) -> None:
     _release_bundle(tmp_path)
     result = evaluate_release_trust(
         tmp_path,
-        repository="mosinlshaikh/tstack",
-        workflow=".github/workflows/release.yml",
+        repository=REPOSITORY,
+        workflow=WORKFLOW,
         commit=COMMIT,
     )
     assert result.passed is True
@@ -38,8 +53,8 @@ def test_trust_gate_holds_when_sbom_missing(tmp_path) -> None:
     (tmp_path / "sbom.cdx.json").unlink()
     result = evaluate_release_trust(
         tmp_path,
-        repository="mosinlshaikh/tstack",
-        workflow=".github/workflows/release.yml",
+        repository=REPOSITORY,
+        workflow=WORKFLOW,
         commit=COMMIT,
     )
     assert result.passed is False
@@ -50,17 +65,20 @@ def test_attestation_receipt_can_be_required(tmp_path) -> None:
     _release_bundle(tmp_path)
     result = evaluate_release_trust(
         tmp_path,
-        repository="mosinlshaikh/tstack",
-        workflow=".github/workflows/release.yml",
+        repository=REPOSITORY,
+        workflow=WORKFLOW,
         commit=COMMIT,
         require_attestation_receipt=True,
     )
     assert result.passed is False
-    (tmp_path / "attestation-verification.json").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "attestation-verification.json").write_text(
+        json.dumps(_valid_receipt()) + "\n",
+        encoding="utf-8",
+    )
     result = evaluate_release_trust(
         tmp_path,
-        repository="mosinlshaikh/tstack",
-        workflow=".github/workflows/release.yml",
+        repository=REPOSITORY,
+        workflow=WORKFLOW,
         commit=COMMIT,
         require_attestation_receipt=True,
     )
@@ -72,7 +90,7 @@ def test_cli_returns_exit_six_on_trust_hold(tmp_path, capsys) -> None:
     (tmp_path / "checksums.sha3-256").unlink()
     code = main([
         "trust-gate", str(tmp_path),
-        "--repository", "mosinlshaikh/tstack",
+        "--repository", REPOSITORY,
         "--commit", COMMIT,
         "--format", "json",
     ])
@@ -86,8 +104,8 @@ def test_invalid_commit_identity_is_rejected(tmp_path) -> None:
     try:
         evaluate_release_trust(
             tmp_path,
-            repository="mosinlshaikh/tstack",
-            workflow=".github/workflows/release.yml",
+            repository=REPOSITORY,
+            workflow=WORKFLOW,
             commit="short",
         )
     except ValueError as exc:
