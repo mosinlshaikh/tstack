@@ -6,10 +6,10 @@ from types import SimpleNamespace
 from tstack import release_orchestrator as module
 
 
-def _patch_stages(monkeypatch, *, policy=True, manifest=True, repro=True, trust=True):
+def _patch_stages(monkeypatch, *, policy_passed=True, manifest=True, repro=True, trust=True):
     monkeypatch.setattr(module, "scan_project", lambda path: object())
     monkeypatch.setattr(module, "load_policy", lambda path: object())
-    monkeypatch.setattr(module, "evaluate_policy", lambda report, policy: SimpleNamespace(passed=policy, active_findings=(), suppressed_findings=()))
+    monkeypatch.setattr(module, "evaluate_policy", lambda report, loaded_policy: SimpleNamespace(passed=policy_passed, active_findings=(), suppressed_findings=()))
     monkeypatch.setattr(module, "verify_manifest", lambda path: SimpleNamespace(valid=manifest, checked=2, missing=(), mismatched=()))
     records = (SimpleNamespace(reproducible=repro),)
     monkeypatch.setattr(module, "compare_builds", lambda left, right: SimpleNamespace(passed=repro, checked=1, records=records, missing_original=(), missing_rebuilt=()))
