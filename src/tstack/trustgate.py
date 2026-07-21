@@ -1,7 +1,6 @@
 """End-to-end release trust gate for TStack."""
 
 from __future__ import annotations
-
 import json
 import re
 from dataclasses import asdict, dataclass
@@ -31,6 +30,30 @@ class TrustGateResult:
     attestation_command: str
 
 
+def _validate_receipt(path: Path, repository: str, workflow: str, artifacts: list[str]) -> GateCheck:
+    if not path.is_file():
+        return GateCheck("attestation-receipt", False, "attestation-verification.json missing")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return GateCheck("attestation-receipt", False, f"invalid receipt: {exc}")
+    expected_artifact = artifacts[0] if artifacts else None
+    passed = (
+        payload.get("schema") == "tstack-attestation-receipt/v1"
+        and payload.get("verified") is True
+        and payload.get("repository") == repository
+        and payload.get("workflow") == workflow
+        and isinstance(payload.get("verification_results"), list)
+        and bool(payload.get("verification_results"))
+        and (expected_artifact is None or payload.get("artifact") == expected_artifact)
+    )
+    return GateCheck(
+        "attestation-receipt",
+        passed,
+        "verified receipt identity matches release" if passed else "receipt schema or release identity mismatch",
+    )
+
+
 def evaluate_release_trust(
     directory: Path,
     *,
@@ -56,6 +79,11 @@ def evaluate_release_trust(
     sha3 = root / "checksums.sha3-256"
     receipt = root / "attestation-verification.json"
 
+    artifacts: list[str] = []
+    if manifest.is_file():
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        artifacts = [item["path"] for item in payload.get("artifacts", []) if isinstance(item, dict) and item.get("path")]
+
     checks = [
         GateCheck("manifest-integrity", verification.valid, f"checked={verification.checked}; missing={len(verification.missing)}; mismatched={len(verification.mismatched)}"),
         GateCheck("sha256-checksums", sha256.is_file(), "checksums.sha256 present" if sha256.is_file() else "checksums.sha256 missing"),
@@ -66,16 +94,13 @@ def evaluate_release_trust(
         GateCheck("commit-identity", True, commit.lower()),
     ]
     if require_attestation_receipt:
-        checks.append(GateCheck("attestation-receipt", receipt.is_file(), "attestation verification receipt present" if receipt.is_file() else "attestation-verification.json missing"))
+        checks.append(_validate_receipt(receipt, repository, workflow, artifacts))
 
-    artifacts = []
-    if manifest.is_file():
-        payload = json.loads(manifest.read_text(encoding="utf-8"))
-        artifacts = [item["path"] for item in payload.get("artifacts", []) if isinstance(item, dict) and item.get("path")]
     subject = artifacts[0] if artifacts else "<artifact>"
     command = (
         f"gh attestation verify {subject} -R {repository} "
-        f"--signer-workflow {repository}/{workflow}@refs/heads/main"
+        f"--signer-workflow {repository}/{workflow} --source-digest {commit.lower()} "
+        f"--deny-self-hosted-runners --format json"
     )
     passed = all(item.passed for item in checks)
     return TrustGateResult(passed, "PASS" if passed else "HOLD", repository, workflow, commit.lower(), tuple(checks), command)
@@ -87,15 +112,11 @@ def trust_gate_json(result: TrustGateResult) -> str:
 
 def trust_gate_markdown(result: TrustGateResult) -> str:
     lines = [
-        "# TStack Release Trust Gate",
-        "",
+        "# TStack Release Trust Gate", "",
         f"- **Verdict:** **{result.verdict}**",
         f"- **Repository:** `{result.repository}`",
         f"- **Workflow:** `{result.workflow}`",
-        f"- **Commit:** `{result.commit}`",
-        "",
-        "## Checks",
-        "",
+        f"- **Commit:** `{result.commit}`", "", "## Checks", "",
     ]
     lines.extend(f"- {'PASS' if item.passed else 'FAIL'} — {item.name}: {item.evidence}" for item in result.checks)
     lines.extend(["", "## Attestation Verification", "", "```bash", result.attestation_command, "```", ""])
