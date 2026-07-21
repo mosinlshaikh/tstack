@@ -8,6 +8,7 @@ from pathlib import Path
 from tstack import __version__
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
+from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.reproducibility import compare_builds, receipt_json, repro_json, verify_attestation
 from tstack.scanner import report_json, report_markdown, scan_project
@@ -151,28 +152,22 @@ def _handle_repro_verify(args: argparse.Namespace) -> int:
 
 
 def _handle_attestation_verify(args: argparse.Namespace) -> int:
-    receipt = verify_attestation(
-        Path(args.artifact),
-        repository=args.repository,
-        workflow=args.workflow,
-        source_digest=args.source_digest,
-        deny_self_hosted=not args.allow_self_hosted,
-    )
+    receipt = verify_attestation(Path(args.artifact), repository=args.repository, workflow=args.workflow, source_digest=args.source_digest, deny_self_hosted=not args.allow_self_hosted)
     destination = args.output or str(Path(args.artifact).expanduser().resolve().parent / "attestation-verification.json")
     _write_output(receipt_json(receipt), destination)
     return 0
 
 
 def _handle_trust_gate(args: argparse.Namespace) -> int:
-    result = evaluate_release_trust(
-        Path(args.path),
-        repository=args.repository,
-        workflow=args.workflow,
-        commit=args.commit,
-        require_attestation_receipt=args.require_attestation_receipt,
-    )
+    result = evaluate_release_trust(Path(args.path), repository=args.repository, workflow=args.workflow, commit=args.commit, require_attestation_receipt=args.require_attestation_receipt)
     _write_output(trust_gate_json(result) if args.format == "json" else trust_gate_markdown(result), args.output)
     return 0 if result.passed else 6
+
+
+def _handle_release_check(args: argparse.Namespace) -> int:
+    result = evaluate_release(Path(args.project), Path(args.release), Path(args.rebuilt), repository=args.repository, workflow=args.workflow, commit=args.commit, require_attestation_receipt=not args.allow_missing_attestation)
+    _write_output(release_json(result) if args.format == "json" else release_markdown(result), args.output)
+    return 0 if result.passed else 8
 
 
 def _add_scan_limits(parser: argparse.ArgumentParser) -> None:
@@ -202,6 +197,7 @@ def build_parser() -> argparse.ArgumentParser:
     item = subparsers.add_parser("repro-verify", help="Compare official and independently rebuilt artifacts"); item.add_argument("original"); item.add_argument("rebuilt"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_repro_verify)
     item = subparsers.add_parser("attestation-verify", help="Verify GitHub/Sigstore provenance and write a receipt"); item.add_argument("artifact"); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--source-digest"); item.add_argument("--allow-self-hosted", action="store_true"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_attestation_verify)
     item = subparsers.add_parser("trust-gate", help="Evaluate complete release integrity and provenance prerequisites"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--commit", required=True); item.add_argument("--require-attestation-receipt", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_trust_gate)
+    item = subparsers.add_parser("release-check", help="Run the complete project, artifact, reproducibility, and provenance release gate"); item.add_argument("--project", default="."); item.add_argument("--release", default="dist"); item.add_argument("--rebuilt", required=True); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--commit", required=True); item.add_argument("--allow-missing-attestation", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_release_check)
 
     for workflow in WORKFLOWS:
         item = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_workflow, workflow=workflow)
