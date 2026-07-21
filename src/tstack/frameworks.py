@@ -58,7 +58,7 @@ def _python(root: Path, files: set[str]) -> tuple[FrameworkProfile, list[Framewo
     checks = 4
     if not _exists(files, "pyproject.toml", "setup.cfg", "tox.ini"):
         findings.append(_finding("PY001", "medium", "Python project configuration missing", None, "No pyproject.toml, setup.cfg, or tox.ini was detected.", "Centralize build, lint, test, and packaging configuration in pyproject.toml."))
-    if not _exists(files, "requirements.txt", "requirements-dev.txt", "poetry.lock", "Pipfile.lock", "uv.lock") and "pyproject.toml" not in files:
+    if not _exists(files, "requirements.txt", "requirements-dev.txt", "requirements.lock", "poetry.lock", "Pipfile.lock", "uv.lock") and "pyproject.toml" not in files:
         findings.append(_finding("PY002", "medium", "Python dependencies are not declared", None, "No supported dependency manifest was detected.", "Declare runtime and development dependencies and commit a reproducible lockfile."))
     if not any(Path(item).name.startswith("test_") and item.endswith(".py") for item in files):
         findings.append(_finding("PY003", "high", "Python tests not detected", None, "No test_*.py files were found.", "Add pytest or unittest coverage for critical paths and failure modes."))

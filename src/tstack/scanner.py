@@ -112,7 +112,7 @@ def scan_project(path: Path, *, max_files: int = 10000, max_file_bytes: int = 1_
         "tests": any(part.lower() in {"test", "tests", "spec", "specs"} for item in relative_files for part in Path(item).parts[:-1]),
         "ci": any(item.startswith(".github/workflows/") or item in {".gitlab-ci.yml", "azure-pipelines.yml"} for item in relative_files),
         "security_policy": any(item.lower() == "security.md" or item.lower() == ".github/security.md" for item in relative_files),
-        "dependency_lock": any(name in names for name in {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "poetry.lock", "pipfile.lock", "uv.lock", "composer.lock", "cargo.lock", "go.sum", "gradle.lockfile"}),
+        "dependency_lock": any(name in names for name in {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "poetry.lock", "pipfile.lock", "uv.lock", "requirements.lock", "composer.lock", "cargo.lock", "go.sum", "gradle.lockfile"}),
     }
     control_rules = {
         "readme": ("DOC001", "low", "README missing", "Add purpose, setup, usage, architecture, and support information."),

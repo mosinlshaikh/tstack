@@ -131,7 +131,7 @@ def _create_healthy_project(root) -> None:
         ".gitignore": ".env\n__pycache__/\n",
         "pyproject.toml": '[project]\nname = "demo"\nversion = "1.0.0"\nrequires-python = ">=3.10"\n',
         "requirements.txt": "pytest==8.0.0\n",
-        "Pipfile.lock": "{}\n",
+        "requirements.lock": "pytest==8.0.0\n",
         "SECURITY.md": "# Security\n",
         ".github/workflows/ci.yml": "name: CI\n",
         "app.py": "def add(a, b): return a + b\n",
