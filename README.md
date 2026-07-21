@@ -118,6 +118,13 @@ tstack desktop blueprint
 tstack desktop blueprint --format json
 ```
 
+File Manager Agent:
+
+```bash
+tstack file inventory .
+tstack file inventory ~/Downloads --format json
+```
+
 ## Human Language Understanding
 
 TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions. The current human-language registry tracks 100+ major languages and can be expanded over time.
