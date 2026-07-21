@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from tstack import __version__
-from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, build_agent_plan, get_agent, list_agents, select_agents_for_goal
+from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, build_agent_plan, build_orchestration_plan, get_agent, list_agents, orchestration_json, orchestration_markdown, select_agents_for_goal
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
@@ -129,6 +129,10 @@ def _handle_agent(args: argparse.Namespace) -> int:
     if args.agent_command == "select":
         selection = select_agents_for_goal(args.goal)
         _write_output(agent_selection_json(selection) if args.format == "json" else agent_selection_markdown(selection), args.output)
+        return 0
+    if args.agent_command == "orchestrate":
+        plan = build_orchestration_plan(args.goal)
+        _write_output(orchestration_json(plan) if args.format == "json" else orchestration_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown agent command: {args.agent_command}")
 
@@ -392,6 +396,11 @@ def build_parser() -> argparse.ArgumentParser:
     agent_item.add_argument("goal")
     agent_item.add_argument("--no-uiux", action="store_true")
     agent_item.add_argument("--no-deployment", action="store_true")
+    agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    agent_item.add_argument("--output", "-o")
+    agent_item.set_defaults(handler=_handle_agent)
+    agent_item = agent_subparsers.add_parser("orchestrate", help="Map selected agents into delivery phases")
+    agent_item.add_argument("goal")
     agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     agent_item.add_argument("--output", "-o")
     agent_item.set_defaults(handler=_handle_agent)

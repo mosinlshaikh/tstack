@@ -53,6 +53,28 @@ class AgentSelection:
     execution_allowed: bool = False
 
 
+@dataclass(frozen=True)
+class OrchestratedPhase:
+    phase_id: str
+    phase_name: str
+    objective: str
+    agents: tuple[str, ...]
+    outputs: tuple[str, ...]
+    approval_required: bool = True
+    execution_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class OrchestrationPlan:
+    schema: str
+    goal: str
+    selected_agent_count: int
+    phases: tuple[OrchestratedPhase, ...]
+    guardrails: tuple[str, ...]
+    approval_required: bool = True
+    execution_allowed: bool = False
+
+
 AGENT_CATALOG: tuple[AgentDefinition, ...] = (
     AgentDefinition("architect-agent", "Architect Agent", "engineering", ("system architecture", "API boundaries", "data modeling", "technical tradeoffs"), ("read-repo", "write-plan")),
     AgentDefinition("developer-agent", "Developer Agent", "engineering", ("implementation planning", "code generation proposals", "refactoring plans", "bug fix plans"), ("read-repo", "write-plan")),
@@ -177,6 +199,112 @@ def agent_selection_markdown(selection: AgentSelection) -> str:
     lines.extend(f"- `{agent.id}` - {agent.name} ({agent.category})" for agent in selection.selected_agents)
     lines.extend(["", "## Rationale", ""])
     lines.extend(f"- {reason}" for reason in selection.rationale)
+    return "\n".join(lines) + "\n"
+
+
+def build_orchestration_plan(goal: str) -> OrchestrationPlan:
+    selection = select_agents_for_goal(goal)
+    selected = {agent.id for agent in selection.selected_agents}
+
+    def present(agent_ids: tuple[str, ...]) -> tuple[str, ...]:
+        return tuple(agent_id for agent_id in agent_ids if agent_id in selected)
+
+    phases = (
+        OrchestratedPhase(
+            "ORCH-001",
+            "Discovery and Requirements",
+            "Clarify goal, collect evidence, define users, scope, constraints, and open questions.",
+            present(("orchestrator-agent", "product-agent", "research-agent", "business-analyst-agent", "knowledge-agent")),
+            ("requirements brief", "evidence log", "open questions", "initial risks"),
+        ),
+        OrchestratedPhase(
+            "ORCH-002",
+            "Architecture and Data",
+            "Design system architecture, APIs, data model, authentication, and module boundaries.",
+            present(("architect-agent", "backend-agent", "database-agent", "auth-agent", "security-agent", "performance-agent")),
+            ("architecture plan", "API plan", "database plan", "threat model"),
+        ),
+        OrchestratedPhase(
+            "ORCH-003",
+            "Advanced UI/UX",
+            "Create user flows, responsive layouts, accessibility requirements, and design-system direction.",
+            present(("ui-ux-agent", "design-system-agent", "accessibility-agent", "frontend-agent", "seo-agent")),
+            ("user flows", "wireframe plan", "component plan", "accessibility checklist"),
+        ),
+        OrchestratedPhase(
+            "ORCH-004",
+            "Business and AI Features",
+            "Plan domain workflows, analytics, AI features, support flows, and integrations.",
+            present(("crm-agent", "erp-agent", "finance-agent", "hr-agent", "support-agent", "marketing-agent", "analytics-agent", "data-engineering-agent", "ai-chatbot-agent", "semantic-search-agent", "voice-agent", "vision-agent", "translation-agent", "recommendation-agent", "integration-agent")),
+            ("feature workflow plan", "AI/data plan", "integration plan", "business rules"),
+        ),
+        OrchestratedPhase(
+            "ORCH-005",
+            "Implementation and Verification",
+            "Plan implementation tasks, tests, documentation, security checks, and performance evidence.",
+            present(("developer-agent", "frontend-agent", "backend-agent", "qa-agent", "security-agent", "performance-agent", "documentation-agent")),
+            ("task plan", "test plan", "security checklist", "documentation plan"),
+        ),
+        OrchestratedPhase(
+            "ORCH-006",
+            "Release and Deployment",
+            "Plan build, release evidence, deployment, monitoring, backup, rollback, and post-release validation.",
+            present(("release-agent", "supply-chain-agent", "devops-agent", "deployment-agent", "monitoring-agent", "backup-agent", "rollback-agent", "operations-agent")),
+            ("release plan", "deployment runbook", "monitoring plan", "rollback plan"),
+        ),
+        OrchestratedPhase(
+            "ORCH-007",
+            "Governance and Approval",
+            "Review policy, RBAC, audit, compliance, approvals, and final human decision.",
+            present(("governance-agent", "rbac-agent", "audit-agent", "compliance-agent", "policy-agent", "orchestrator-agent")),
+            ("approval packet", "policy review", "audit plan", "final decision"),
+        ),
+    )
+    return OrchestrationPlan(
+        schema="tstack-agent-orchestration/v1",
+        goal=selection.goal,
+        selected_agent_count=len(selection.selected_agents),
+        phases=phases,
+        guardrails=(
+            "The orchestration plan coordinates agents but does not execute actions.",
+            "Every phase remains human-approval gated.",
+            "Private scraping, SSH, code changes, and deployment require explicit future approval controls.",
+            "Each phase must produce evidence and verification outputs.",
+        ),
+    )
+
+
+def orchestration_json(plan: OrchestrationPlan) -> str:
+    return json.dumps(asdict(plan), indent=2, sort_keys=True) + "\n"
+
+
+def orchestration_markdown(plan: OrchestrationPlan) -> str:
+    lines = [
+        "# TStack Agent Orchestration Plan",
+        "",
+        f"- Goal: {plan.goal}",
+        f"- Selected agents: {plan.selected_agent_count}",
+        f"- Phases: {len(plan.phases)}",
+        f"- Approval required: {'yes' if plan.approval_required else 'no'}",
+        f"- Execution allowed: {'yes' if plan.execution_allowed else 'no'}",
+        "",
+    ]
+    for phase in plan.phases:
+        lines.extend(
+            [
+                f"## {phase.phase_id} - {phase.phase_name}",
+                "",
+                phase.objective,
+                "",
+                f"- Agents: {', '.join(phase.agents) if phase.agents else 'not selected for this goal'}",
+                f"- Outputs: {', '.join(phase.outputs)}",
+                f"- Approval required: {'yes' if phase.approval_required else 'no'}",
+                f"- Execution allowed: {'yes' if phase.execution_allowed else 'no'}",
+                "",
+            ]
+        )
+    lines.extend(["## Guardrails", ""])
+    lines.extend(f"- {item}" for item in plan.guardrails)
     return "\n".join(lines) + "\n"
 
 

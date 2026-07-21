@@ -21,6 +21,7 @@ tstack agent catalog
 tstack agent catalog --category engineering
 tstack agent show ui-ux-agent
 tstack agent select "Medical Store Management System website with admin panel and deployment"
+tstack agent orchestrate "Medical Store Management System website with admin panel and deployment"
 ```
 
 JSON output:
@@ -64,6 +65,20 @@ Every agent definition includes role, category, responsibilities, permissions, a
 The orchestrator can select relevant agents from a goal. For example, a website goal can select website builder, UI/UX, frontend, backend, database, SEO, security, QA, release, and deployment agents.
 
 Selection is still plan-only and approval-gated.
+
+## Orchestration
+
+Agent orchestration maps selected agents into delivery phases:
+
+- Discovery and Requirements
+- Architecture and Data
+- Advanced UI/UX
+- Business and AI Features
+- Implementation and Verification
+- Release and Deployment
+- Governance and Approval
+
+This is the first step toward multi-agent collaboration while preserving explicit approval boundaries.
 
 ## Safety Model
 
