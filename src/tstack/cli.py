@@ -11,6 +11,7 @@ from tstack.approval import approval_decision_json, approval_decision_markdown, 
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
+from tstack.desktop import desktop_blueprint_json, desktop_blueprint_markdown
 from tstack.executor import apply_execution, execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, execution_result_json, execution_result_markdown, plan_execution
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
@@ -175,6 +176,13 @@ def _handle_execute(args: argparse.Namespace) -> int:
         _write_output(executor_plan_json(plan) if args.format == "json" else executor_plan_markdown(plan), args.output)
         return 0 if plan.executable else 15
     raise ValueError(f"unknown execute command: {args.execute_command}")
+
+
+def _handle_desktop(args: argparse.Namespace) -> int:
+    if args.desktop_command == "blueprint":
+        _write_output(desktop_blueprint_json() if args.format == "json" else desktop_blueprint_markdown(), args.output)
+        return 0
+    raise ValueError(f"unknown desktop command: {args.desktop_command}")
 
 
 def _handle_human(args: argparse.Namespace) -> int:
@@ -501,6 +509,12 @@ def build_parser() -> argparse.ArgumentParser:
     execute_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     execute_item.add_argument("--output", "-o")
     execute_item.set_defaults(handler=_handle_execute)
+    item = subparsers.add_parser("desktop", help="Inspect local-first desktop Agentic OS blueprint")
+    desktop_subparsers = item.add_subparsers(dest="desktop_command", required=True)
+    desktop_item = desktop_subparsers.add_parser("blueprint", help="Show local-first desktop system architecture")
+    desktop_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    desktop_item.add_argument("--output", "-o")
+    desktop_item.set_defaults(handler=_handle_desktop)
     item = subparsers.add_parser("human", help="Parse human language and typo-tolerant user intent")
     human_subparsers = item.add_subparsers(dest="human_command", required=True)
     human_item = human_subparsers.add_parser("languages", help="List supported human language registry")

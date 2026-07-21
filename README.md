@@ -109,6 +109,15 @@ tstack execute plan approval.json decision.json
 tstack execute plan approval.json decision.json --target README.md --apply
 ```
 
+## Local Desktop OS
+
+TStack includes a local-first desktop Agentic OS blueprint for file, desktop, browser, code, voice, permission, audit, and rollback capabilities without external APIs by default.
+
+```bash
+tstack desktop blueprint
+tstack desktop blueprint --format json
+```
+
 ## Human Language Understanding
 
 TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions. The current human-language registry tracks 100+ major languages and can be expanded over time.
