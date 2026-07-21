@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ttrl-tstack"
-version = "0.14.0"
-description = "TTRL evidence-driven engineering workflows, audits, policy gates, supply-chain verification, platform security, evidence bundles, and explainable local learning"
+version = "0.15.0"
+description = "TTRL evidence-driven engineering workflows, audits, supply-chain verification, explainable learning, and a human-approved decision brain"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary until a public license is selected" }
 authors = [{ name = "T Technology Research Lab" }]
-keywords = ["software-engineering", "devsecops", "docker", "kubernetes", "container-security", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins", "sbom", "provenance", "sigstore", "supply-chain", "reproducible-builds", "release-gate", "merkle-tree", "learning-engine", "human-in-the-loop"]
+keywords = ["software-engineering", "devsecops", "docker", "kubernetes", "container-security", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins", "sbom", "provenance", "sigstore", "supply-chain", "reproducible-builds", "release-gate", "merkle-tree", "learning-engine", "decision-engine", "explainable-ai", "human-in-the-loop"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -28,6 +28,7 @@ dev = ["pytest>=8.0"]
 tstack = "tstack.cli:main"
 tstack-evidence = "tstack.evidence_cli:main"
 tstack-learn = "tstack.learning_cli:main"
+tstack-decide = "tstack.decision_cli:main"
 
 [project.entry-points."tstack.rules"]
 # Third-party packages register rule plugins in this group.
