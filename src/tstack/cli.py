@@ -15,6 +15,7 @@ from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_a
 from tstack.creation import create_plan, creation_blueprint_json, creation_blueprint_markdown, creation_plan_json, creation_plan_markdown
 from tstack.desktop import desktop_blueprint_json, desktop_blueprint_markdown
 from tstack.executor import apply_execution, execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, execution_result_json, execution_result_markdown, plan_execution
+from tstack.environment import environment_json, environment_markdown, inspect_environment
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
@@ -197,6 +198,14 @@ def _handle_creation(args: argparse.Namespace) -> int:
         _write_output(creation_plan_json(plan) if args.format == "json" else creation_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown creation command: {args.creation_command}")
+
+
+def _handle_environment(args: argparse.Namespace) -> int:
+    if args.environment_command == "inspect":
+        report = inspect_environment(profile=args.profile)
+        _write_output(environment_json(report) if args.format == "json" else environment_markdown(report), args.output)
+        return 0
+    raise ValueError(f"unknown environment command: {args.environment_command}")
 
 
 def _handle_file(args: argparse.Namespace) -> int:
@@ -561,6 +570,13 @@ def build_parser() -> argparse.ArgumentParser:
     creation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     creation_item.add_argument("--output", "-o")
     creation_item.set_defaults(handler=_handle_creation)
+    item = subparsers.add_parser("environment", help="Inspect local tools for Creation OS profiles")
+    environment_subparsers = item.add_subparsers(dest="environment_command", required=True)
+    environment_item = environment_subparsers.add_parser("inspect", help="Detect local tools and missing dependencies")
+    environment_item.add_argument("--profile", choices=("all", "core", "web", "devops", "3d", "game", "mobile", "media"), default="all")
+    environment_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    environment_item.add_argument("--output", "-o")
+    environment_item.set_defaults(handler=_handle_environment)
     item = subparsers.add_parser("file", help="Run local-first file agent inventory and duplicate analysis")
     file_subparsers = item.add_subparsers(dest="file_command", required=True)
     file_item = file_subparsers.add_parser("inventory", help="Scan local files and detect duplicate content")

@@ -128,6 +128,14 @@ tstack creation blueprint --format json
 tstack creation plan image-to-glb "Create low-poly GLB from character image"
 ```
 
+Environment Manager:
+
+```bash
+tstack environment inspect
+tstack environment inspect --profile 3d
+tstack environment inspect --profile mobile --format json
+```
+
 File Manager Agent:
 
 ```bash
