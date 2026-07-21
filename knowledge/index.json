@@ -65,11 +65,71 @@
   ],
   "packs": [
     {
+      "id": "language-assembly",
+      "title": "Assembly Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/assembly/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-bash",
+      "title": "Bash Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/bash/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-c",
       "title": "C Language Pack",
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/c/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-clojure",
+      "title": "Clojure Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/clojure/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-cobol",
+      "title": "COBOL Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/cobol/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -125,6 +185,21 @@
       ]
     },
     {
+      "id": "language-delphi",
+      "title": "Delphi Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/delphi/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-elixir",
       "title": "Elixir Language Pack",
       "version": "0.1.0",
@@ -155,11 +230,56 @@
       ]
     },
     {
+      "id": "language-fortran",
+      "title": "Fortran Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/fortran/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-fsharp",
+      "title": "F# Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/fsharp/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-go",
       "title": "Go Language Pack",
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/go/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-groovy",
+      "title": "Groovy Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/groovy/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -260,11 +380,71 @@
       ]
     },
     {
+      "id": "language-matlab",
+      "title": "MATLAB Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/matlab/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-move",
+      "title": "Move Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/move/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-nim",
+      "title": "Nim Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/nim/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
       "id": "language-objective-c",
       "title": "Objective-C Language Pack",
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/objective-c/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-ocaml",
+      "title": "OCaml Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/ocaml/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -295,6 +475,21 @@
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/php/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-powershell",
+      "title": "PowerShell Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/powershell/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -430,6 +625,36 @@
       "version": "0.1.0",
       "category": "languages",
       "path": "knowledge/languages/typescript/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-visual-basic",
+      "title": "Visual Basic Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/visual-basic/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-zig",
+      "title": "Zig Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/zig/manifest.json",
       "status": "draft",
       "topics": [
         "overview",

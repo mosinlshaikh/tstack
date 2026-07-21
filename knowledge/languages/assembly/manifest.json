@@ -1,0 +1,65 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-assembly",
+  "title": "Assembly Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "assembly",
+  "audience": [
+    "software engineers",
+    "technical leads",
+    "security reviewers",
+    "QA engineers"
+  ],
+  "summary": "Practical engineering guidance for Assembly: fundamentals, security, performance, testing, and production readiness.",
+  "topics": [
+    {
+      "id": "overview",
+      "title": "Assembly Overview",
+      "path": "overview.md"
+    },
+    {
+      "id": "security",
+      "title": "Assembly Security",
+      "path": "security.md"
+    },
+    {
+      "id": "performance",
+      "title": "Assembly Performance",
+      "path": "performance.md"
+    },
+    {
+      "id": "testing",
+      "title": "Assembly Testing",
+      "path": "testing.md"
+    },
+    {
+      "id": "production",
+      "title": "Assembly Production",
+      "path": "production.md"
+    }
+  ],
+  "signals": {
+    "project_files": [],
+    "test_patterns": [
+      "tests/",
+      "test/",
+      "spec/"
+    ],
+    "lockfiles": []
+  },
+  "quality_gates": [
+    "declared-runtime-version",
+    "dependency-lock-or-resolution-strategy",
+    "automated-tests",
+    "lint-or-static-analysis",
+    "security-review-for-input-and-secrets",
+    "production-runtime-plan"
+  ],
+  "limitations": [
+    "This pack provides curated engineering guidance, not a complete export of model knowledge.",
+    "Framework-specific details should live in dedicated framework packs.",
+    "Runtime behavior may vary across Assembly implementations, versions, and deployment targets."
+  ]
+}
