@@ -35,8 +35,8 @@ jobs:
         run: python -m build
       - name: Generate supply-chain metadata
         run: |
-          tstack manifest dist --checksums
           tstack sbom --output dist/sbom.cdx.json
+          tstack manifest dist --checksums
           tstack verify dist
       - name: Attest release artifacts
         uses: actions/attest@v4
