@@ -136,6 +136,13 @@ tstack environment inspect --profile 3d
 tstack environment inspect --profile mobile --format json
 ```
 
+Mastery Standard:
+
+```bash
+tstack mastery profile
+tstack mastery profile --applies-to engineering-agents --format json
+```
+
 File Manager Agent:
 
 ```bash
