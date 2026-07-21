@@ -21,7 +21,7 @@ from tstack.environment import environment_json, environment_markdown, inspect_e
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.file_runtime import apply_file_transaction, file_transaction_json, file_transaction_markdown, undo_file_transaction
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
-from tstack.kernel import approve_task, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, get_task, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
 from tstack.mastery import level_10_mastery_profile, mastery_json, mastery_markdown
@@ -257,6 +257,14 @@ def _handle_sandbox(args: argparse.Namespace) -> int:
 def _handle_workspace(args: argparse.Namespace) -> int:
     if args.workspace_command == "init":
         workspace = kernel_init_workspace(Path(args.path))
+        _write_output(kernel_json(workspace), args.output)
+        return 0
+    if args.workspace_command == "export":
+        bundle = export_workspace_state(Path(args.workspace))
+        _write_output(kernel_json(bundle), args.output)
+        return 0
+    if args.workspace_command == "import":
+        workspace = import_workspace_state(Path(args.workspace), Path(args.bundle))
         _write_output(kernel_json(workspace), args.output)
         return 0
     raise ValueError(f"unknown workspace command: {args.workspace_command}")
@@ -832,6 +840,15 @@ def build_parser() -> argparse.ArgumentParser:
     workspace_subparsers = item.add_subparsers(dest="workspace_command", required=True)
     workspace_item = workspace_subparsers.add_parser("init", help="Initialize runtime workspace state")
     workspace_item.add_argument("path", nargs="?", default=".")
+    workspace_item.add_argument("--output", "-o")
+    workspace_item.set_defaults(handler=_handle_workspace)
+    workspace_item = workspace_subparsers.add_parser("export", help="Export portable runtime state without approval key material")
+    workspace_item.add_argument("--workspace", default=".")
+    workspace_item.add_argument("--output", "-o", required=True)
+    workspace_item.set_defaults(handler=_handle_workspace)
+    workspace_item = workspace_subparsers.add_parser("import", help="Import portable runtime state into a workspace")
+    workspace_item.add_argument("bundle")
+    workspace_item.add_argument("--workspace", default=".")
     workspace_item.add_argument("--output", "-o")
     workspace_item.set_defaults(handler=_handle_workspace)
 

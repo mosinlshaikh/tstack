@@ -147,6 +147,16 @@ class KernelWorkerRun:
     task_ids: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class KernelStateBundle:
+    schema: str
+    workspace: str
+    exported_at: str
+    tables: dict[str, list[dict]]
+    approval_key_exported: bool
+    audit_chain_valid: bool
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -646,6 +656,62 @@ def verify_audit_chain(root_path: Path) -> bool:
             return False
         previous = row[7]
     return True
+
+
+def export_workspace_state(root_path: Path) -> KernelStateBundle:
+    root = root_path.expanduser().resolve()
+    tables: dict[str, list[dict]] = {}
+    table_names = ("tasks", "approvals", "approval_revocations", "audit_records", "snapshots", "events")
+    with _connect(root) as db:
+        db.row_factory = sqlite3.Row
+        for table in table_names:
+            rows = db.execute(f"select * from {table}").fetchall()
+            tables[table] = [dict(row) for row in rows]
+    return KernelStateBundle("tstack-kernel-state-bundle/v1", str(root), _now(), tables, False, verify_audit_chain(root))
+
+
+def import_workspace_state(root_path: Path, bundle_path: Path) -> KernelWorkspace:
+    workspace = init_workspace(root_path)
+    bundle = json.loads(bundle_path.expanduser().resolve().read_text(encoding="utf-8"))
+    if bundle.get("schema") != "tstack-kernel-state-bundle/v1":
+        raise ValueError("invalid kernel state bundle schema")
+    if bundle.get("approval_key_exported") is not False:
+        raise ValueError("kernel state bundle must not include approval key material")
+    tables = bundle.get("tables", {})
+    with _connect(root_path.expanduser().resolve()) as db:
+        for table in ("events", "snapshots", "audit_records", "approval_revocations", "approvals", "tasks"):
+            db.execute(f"delete from {table}")
+        for row in tables.get("tasks", []):
+            db.execute(
+                "insert into tasks(task_id, capability, target, content, state, request_hash, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)",
+                (row["task_id"], row["capability"], row["target"], row["content"], row["state"], row["request_hash"], row["created_at"], row["updated_at"]),
+            )
+        for row in tables.get("approvals", []):
+            db.execute(
+                "insert into approvals(approval_id, task_id, request_hash, actor, mode, expires_at, max_uses, nonce, timestamp_utc, signature, uses) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (row["approval_id"], row["task_id"], row["request_hash"], row["actor"], row["mode"], row["expires_at"], row["max_uses"], row["nonce"], row["timestamp_utc"], row["signature"], row["uses"]),
+            )
+        for row in tables.get("approval_revocations", []):
+            db.execute(
+                "insert into approval_revocations(approval_id, task_id, actor, reason, timestamp_utc) values (?, ?, ?, ?, ?)",
+                (row["approval_id"], row["task_id"], row["actor"], row["reason"], row["timestamp_utc"]),
+            )
+        for row in tables.get("audit_records", []):
+            db.execute(
+                "insert into audit_records(id, task_id, capability, input_digest, output_digest, approval_id, status, previous_hash, record_hash, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (row["id"], row["task_id"], row["capability"], row["input_digest"], row["output_digest"], row["approval_id"], row["status"], row["previous_hash"], row["record_hash"], row["created_at"]),
+            )
+        for row in tables.get("snapshots", []):
+            db.execute(
+                "insert into snapshots(snapshot_id, task_id, target, snapshot_path, existed, created_at) values (?, ?, ?, ?, ?, ?)",
+                (row["snapshot_id"], row["task_id"], row["target"], row["snapshot_path"], row["existed"], row["created_at"]),
+            )
+        for row in tables.get("events", []):
+            db.execute(
+                "insert into events(event_id, task_id, event_type, state, message, created_at) values (?, ?, ?, ?, ?, ?)",
+                (row["event_id"], row["task_id"], row["event_type"], row["state"], row["message"], row["created_at"]),
+            )
+    return workspace
 
 
 def kernel_json(item) -> str:

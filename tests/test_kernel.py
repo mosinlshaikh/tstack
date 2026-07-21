@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace, list_events, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -167,6 +167,25 @@ def test_worker_pool_respects_limit(tmp_path) -> None:
     assert result.remaining_queued == 1
 
 
+def test_workspace_state_export_import_without_key_material(tmp_path) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    init_workspace(source)
+    task = submit_task(source, capability="filesystem.write", target="state.txt", content="state")
+    approve_task(source, task.task_id, actor="Mosin")
+    enqueue_task(source, task.task_id)
+    run_worker_pool(source)
+    bundle = export_workspace_state(source)
+    assert bundle.schema == "tstack-kernel-state-bundle/v1"
+    assert bundle.approval_key_exported is False
+    assert "approval.key" not in json.dumps(bundle.tables)
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps({"schema": bundle.schema, "workspace": bundle.workspace, "exported_at": bundle.exported_at, "tables": bundle.tables, "approval_key_exported": bundle.approval_key_exported, "audit_chain_valid": bundle.audit_chain_valid}, indent=2), encoding="utf-8")
+    import_workspace_state(target, bundle_path)
+    assert get_task(target, task.task_id).state == "SUCCEEDED"
+    assert verify_audit_chain(target) is True
+
+
 def test_kernel_timeout_marks_task_failed(tmp_path) -> None:
     init_workspace(tmp_path)
     task = submit_task(tmp_path, capability="filesystem.write", target="note.txt", content="after")
@@ -280,3 +299,21 @@ def test_worker_cli_run(tmp_path, capsys) -> None:
     assert payload["schema"] == "tstack-kernel-worker-run/v1"
     assert payload["succeeded"] == 1
     assert (workspace / "worker.txt").read_text(encoding="utf-8") == "done"
+
+
+def test_workspace_cli_export_import(tmp_path, capsys) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    bundle = tmp_path / "bundle.json"
+    assert main(["workspace", "init", str(source)]) == 0
+    capsys.readouterr()
+    assert main(["task", "submit", "--workspace", str(source), "--target", "x.txt", "--content", "x"]) == 0
+    task = json.loads(capsys.readouterr().out)
+    assert main(["workspace", "export", "--workspace", str(source), "--output", str(bundle)]) == 0
+    capsys.readouterr()
+    assert bundle.is_file()
+    payload = json.loads(bundle.read_text(encoding="utf-8"))
+    assert payload["approval_key_exported"] is False
+    assert main(["workspace", "import", str(bundle), "--workspace", str(target)]) == 0
+    capsys.readouterr()
+    assert get_task(target, task["task_id"]).state == "WAITING_FOR_APPROVAL"

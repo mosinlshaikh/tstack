@@ -125,6 +125,8 @@ SQLite Runtime Vertical Slice:
 
 ```bash
 tstack workspace init .
+tstack workspace export --output state-bundle.json
+tstack workspace import state-bundle.json --workspace restored-workspace
 tstack daemon start
 tstack daemon status
 tstack daemon recover --policy fail

@@ -6,6 +6,8 @@ It currently supports:
 
 ```bash
 tstack workspace init .
+tstack workspace export --output state-bundle.json
+tstack workspace import state-bundle.json --workspace restored-workspace
 tstack daemon start
 tstack daemon status
 tstack daemon recover --policy fail
@@ -26,6 +28,7 @@ tstack kernel-rollback apply TASK_ID
 
 - SQLite workspace state at `.tstack/state.db`
 - Local daemon status foundation from SQLite state
+- Portable workspace state export/import without approval key material
 - Workspace-local approval signing key at `.tstack/approval.key`
 - Deterministic task IDs
 - Task persistence
@@ -51,3 +54,4 @@ tstack kernel-rollback apply TASK_ID
 - Recovery is explicit via `tstack daemon recover`; it is not automatic until a daemon loop exists
 - Only `filesystem.write` is executable in this vertical slice
 - Signing is workspace-local HMAC, not asymmetric public-key approval
+- Imported approvals cannot be verified with the original key unless key custody is separately handled; the export intentionally excludes key material
