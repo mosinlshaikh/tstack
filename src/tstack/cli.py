@@ -12,6 +12,7 @@ from tstack.automation import get_capability, list_capabilities, registry_json, 
 from tstack.bug import bug_report_json, bug_report_markdown, find_bugs
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
+from tstack.creation import creation_blueprint_json, creation_blueprint_markdown
 from tstack.desktop import desktop_blueprint_json, desktop_blueprint_markdown
 from tstack.executor import apply_execution, execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, execution_result_json, execution_result_markdown, plan_execution
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
@@ -185,6 +186,13 @@ def _handle_desktop(args: argparse.Namespace) -> int:
         _write_output(desktop_blueprint_json() if args.format == "json" else desktop_blueprint_markdown(), args.output)
         return 0
     raise ValueError(f"unknown desktop command: {args.desktop_command}")
+
+
+def _handle_creation(args: argparse.Namespace) -> int:
+    if args.creation_command == "blueprint":
+        _write_output(creation_blueprint_json() if args.format == "json" else creation_blueprint_markdown(), args.output)
+        return 0
+    raise ValueError(f"unknown creation command: {args.creation_command}")
 
 
 def _handle_file(args: argparse.Namespace) -> int:
@@ -537,6 +545,12 @@ def build_parser() -> argparse.ArgumentParser:
     desktop_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     desktop_item.add_argument("--output", "-o")
     desktop_item.set_defaults(handler=_handle_desktop)
+    item = subparsers.add_parser("creation", help="Inspect local-first Creation OS blueprint")
+    creation_subparsers = item.add_subparsers(dest="creation_command", required=True)
+    creation_item = creation_subparsers.add_parser("blueprint", help="Show 3D, game, web, and mobile creation architecture")
+    creation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    creation_item.add_argument("--output", "-o")
+    creation_item.set_defaults(handler=_handle_creation)
     item = subparsers.add_parser("file", help="Run local-first file agent inventory and duplicate analysis")
     file_subparsers = item.add_subparsers(dest="file_command", required=True)
     file_item = file_subparsers.add_parser("inventory", help="Scan local files and detect duplicate content")

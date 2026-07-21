@@ -118,6 +118,15 @@ tstack desktop blueprint
 tstack desktop blueprint --format json
 ```
 
+## Creation OS
+
+TStack includes a local-first Creation OS blueprint for image-to-GLB, Blender automation, game building, Android/iOS app creation, Docker/native tool split, and deployment approval gates.
+
+```bash
+tstack creation blueprint
+tstack creation blueprint --format json
+```
+
 File Manager Agent:
 
 ```bash
