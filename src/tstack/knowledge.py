@@ -27,6 +27,13 @@ class KnowledgePack:
     path: str
 
 
+@dataclass(frozen=True)
+class KnowledgeValidationResult:
+    valid: bool
+    packs_checked: int
+    errors: tuple[str, ...]
+
+
 def knowledge_root() -> Path:
     return Path(__file__).resolve().parents[2] / "knowledge"
 
@@ -127,4 +134,102 @@ def pack_markdown(pack: KnowledgePack) -> str:
     lines.extend(["", pack.summary, "", "## Topics", ""])
     for topic in pack.topics:
         lines.append(f"- `{topic.id}` - {topic.title} ({topic.path})")
+    return "\n".join(lines) + "\n"
+
+
+def validate_knowledge(root: Path | None = None) -> KnowledgeValidationResult:
+    base = root or knowledge_root()
+    errors: list[str] = []
+    packs_checked = 0
+
+    try:
+        index = load_knowledge_index(base)
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        return KnowledgeValidationResult(False, 0, (f"invalid knowledge index: {exc}",))
+
+    if index.get("schema") != "tstack-knowledge-index/v1":
+        errors.append("knowledge index schema must be tstack-knowledge-index/v1")
+    if index.get("compatibility", {}).get("knowledge_schema") != "tstack-knowledge-pack/v1":
+        errors.append("knowledge index compatibility.knowledge_schema must be tstack-knowledge-pack/v1")
+
+    pack_ids: set[str] = set()
+    registered_dirs: set[Path] = set()
+    required_topics = {"overview", "security", "performance", "testing", "production"}
+
+    for item in index.get("packs", []):
+        packs_checked += 1
+        pack_id = item.get("id", "<missing-id>")
+        if pack_id in pack_ids:
+            errors.append(f"duplicate pack id: {pack_id}")
+        pack_ids.add(pack_id)
+
+        manifest_path = base.parent / item.get("path", "")
+        registered_dirs.add(manifest_path.parent)
+        if not manifest_path.exists():
+            errors.append(f"{pack_id}: missing manifest {manifest_path}")
+            continue
+
+        try:
+            manifest = _load_json(manifest_path)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{pack_id}: invalid manifest JSON: {exc}")
+            continue
+
+        for field in ("schema", "id", "title", "version", "status", "category", "summary", "topics", "quality_gates", "limitations"):
+            if not manifest.get(field):
+                errors.append(f"{pack_id}: missing manifest field {field}")
+
+        if manifest.get("schema") != "tstack-knowledge-pack/v1":
+            errors.append(f"{pack_id}: manifest schema must be tstack-knowledge-pack/v1")
+        for field in ("id", "version", "status", "category"):
+            if manifest.get(field) != item.get(field):
+                errors.append(f"{pack_id}: manifest {field} does not match index")
+
+        topics = {topic.get("id"): topic for topic in manifest.get("topics", [])}
+        missing_topics = required_topics - set(topics)
+        if missing_topics:
+            errors.append(f"{pack_id}: missing topics {','.join(sorted(missing_topics))}")
+        for topic_id, topic in topics.items():
+            topic_path = manifest_path.parent / topic.get("path", "")
+            if not topic_path.exists():
+                errors.append(f"{pack_id}: missing topic file {topic_id}: {topic_path}")
+                continue
+            if not topic_path.read_text(encoding="utf-8").startswith("# "):
+                errors.append(f"{pack_id}: topic {topic_id} must start with a markdown heading")
+
+    language_root = base / "languages"
+    if language_root.exists():
+        language_dirs = {path for path in language_root.iterdir() if path.is_dir()}
+        unregistered = language_dirs - registered_dirs
+        missing_dirs = registered_dirs - language_dirs
+        for path in sorted(unregistered):
+            errors.append(f"unregistered language directory: {path.name}")
+        for path in sorted(missing_dirs):
+            errors.append(f"registered language directory is missing: {path.name}")
+
+    return KnowledgeValidationResult(not errors, packs_checked, tuple(errors))
+
+
+def validation_json(result: KnowledgeValidationResult) -> str:
+    return json.dumps(
+        {
+            "schema": "tstack-knowledge-validation/v1",
+            "valid": result.valid,
+            "packs_checked": result.packs_checked,
+            "errors": list(result.errors),
+        },
+        indent=2,
+    ) + "\n"
+
+
+def validation_markdown(result: KnowledgeValidationResult) -> str:
+    lines = [
+        "# TStack Knowledge Validation",
+        "",
+        f"- Verdict: **{'PASS' if result.valid else 'FAIL'}**",
+        f"- Packs checked: {result.packs_checked}",
+    ]
+    if result.errors:
+        lines.extend(["", "## Errors", ""])
+        lines.extend(f"- {error}" for error in result.errors)
     return "\n".join(lines) + "\n"

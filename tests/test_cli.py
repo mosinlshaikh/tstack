@@ -63,6 +63,21 @@ def test_knowledge_unknown_pack_fails(capsys) -> None:
     assert "unknown knowledge pack" in capsys.readouterr().err
 
 
+def test_knowledge_validate_command_passes(capsys) -> None:
+    assert main(["knowledge", "validate"]) == 0
+    output = capsys.readouterr().out
+    assert "TStack Knowledge Validation" in output
+    assert "Verdict: **PASS**" in output
+
+
+def test_knowledge_validate_json_is_machine_readable(capsys) -> None:
+    assert main(["knowledge", "validate", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-knowledge-validation/v1"
+    assert payload["valid"] is True
+    assert payload["packs_checked"] >= 10
+
+
 def test_init_creates_project_contract(tmp_path, capsys) -> None:
     assert main(["init", str(tmp_path)]) == 0
     assert (tmp_path / ".tstack" / "config.json").is_file()
