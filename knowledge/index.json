@@ -1,0 +1,71 @@
+{
+  "schema": "tstack-knowledge-index/v1",
+  "version": "0.1.0",
+  "title": "TStack Engineering Knowledge Index",
+  "description": "Index for versioned TStack engineering knowledge packs.",
+  "maintainers": [
+    "TStack maintainers"
+  ],
+  "principles": [
+    "evidence-first",
+    "versioned",
+    "reviewable",
+    "graph-compatible",
+    "human-approved"
+  ],
+  "categories": [
+    {
+      "id": "languages",
+      "title": "Programming Languages",
+      "description": "Language fundamentals, runtime behavior, testing, security, performance, and production guidance.",
+      "status": "planned"
+    },
+    {
+      "id": "frameworks",
+      "title": "Frameworks",
+      "description": "Framework-specific architecture, conventions, security, testing, and deployment guidance.",
+      "status": "planned"
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture",
+      "description": "System design patterns, tradeoffs, migration strategies, and governance guidance.",
+      "status": "planned"
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "description": "Secure coding, threat modeling, authentication, cryptography, supply-chain, and compliance guidance.",
+      "status": "planned"
+    },
+    {
+      "id": "databases",
+      "title": "Databases",
+      "description": "Relational, document, cache, search, analytics, and graph database guidance.",
+      "status": "planned"
+    },
+    {
+      "id": "devops",
+      "title": "DevOps",
+      "description": "CI/CD, containers, Kubernetes, infrastructure as code, observability, and release operations.",
+      "status": "planned"
+    },
+    {
+      "id": "ai",
+      "title": "AI Engineering",
+      "description": "Machine learning, LLM applications, RAG, agents, evaluation, safety, and deployment guidance.",
+      "status": "planned"
+    },
+    {
+      "id": "testing",
+      "title": "Testing and QA",
+      "description": "Unit, integration, contract, end-to-end, performance, regression, and release testing guidance.",
+      "status": "planned"
+    }
+  ],
+  "packs": [],
+  "compatibility": {
+    "minimum_tstack_version": "0.16.0",
+    "knowledge_schema": "tstack-knowledge-pack/v1"
+  }
+}
