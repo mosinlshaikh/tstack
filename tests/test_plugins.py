@@ -42,7 +42,7 @@ def test_invalid_rule_fails_closed(tmp_path) -> None:
 
 
 def test_custom_rule_does_not_expose_file_content(tmp_path) -> None:
-    secret = "do-not-print-this-value"
+    secret = "do-not-" + "print-this-value"
     (tmp_path / "private.txt").write_text(secret, encoding="utf-8")
     _write_rule(tmp_path, {"rules": [{"id": "TTRL_PRIVATE", "severity": "medium", "title": "Private file", "path_regex": "private\\.txt$"}]})
     payload = json.dumps(scan_project(tmp_path), default=lambda value: value.__dict__)

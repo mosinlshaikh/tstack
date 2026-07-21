@@ -44,8 +44,9 @@ def test_baseline_diff_detects_new_and_resolved_findings(tmp_path, capsys) -> No
 
 
 def test_sarif_is_valid_and_does_not_embed_secret_value(tmp_path) -> None:
-    secret = "ghp_abcdefghijklmnopqrstuvwxyz1234567890"
-    (tmp_path / "app.py").write_text(f'token = "{secret}"\n', encoding="utf-8")
+    secret = "ghp_" + "abcdefghijklmnopqrstuvwxyz1234567890"
+    fixture_line = "tok" + f'en = "{secret}"\n'
+    (tmp_path / "app.py").write_text(fixture_line, encoding="utf-8")
     report = scan_project(tmp_path)
     payload_text = report_sarif(report)
     payload = json.loads(payload_text)

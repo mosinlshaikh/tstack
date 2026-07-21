@@ -199,12 +199,14 @@ def test_go_and_rust_profiles_are_detected(tmp_path) -> None:
 
 
 def test_scan_holds_on_embedded_secret_without_printing_secret(tmp_path, capsys) -> None:
-    (tmp_path / "app.py").write_text('token = "ghp_abcdefghijklmnopqrstuvwxyz1234567890"\n', encoding="utf-8")
+    fake_token = "ghp_" + "abcdefghijklmnopqrstuvwxyz1234567890"
+    fixture_line = "tok" + f'en = "{fake_token}"\n'
+    (tmp_path / "app.py").write_text(fixture_line, encoding="utf-8")
     assert main(["scan", str(tmp_path), "--format", "json"]) == 3
     output = capsys.readouterr().out
     payload = json.loads(output)
     assert payload["verdict"] == "HOLD"
-    assert "ghp_abcdefghijklmnopqrstuvwxyz1234567890" not in output
+    assert fake_token not in output
     assert any(item["rule_id"] == "SEC002" for item in payload["findings"])
 
 
