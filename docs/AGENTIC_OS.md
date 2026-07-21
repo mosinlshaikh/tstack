@@ -14,6 +14,14 @@ The current implementation is intentionally **plan-only**. It creates structured
 tstack agent plan "Build a hospital management system"
 ```
 
+List specialized agents:
+
+```bash
+tstack agent catalog
+tstack agent catalog --category engineering
+tstack agent show ui-ux-agent
+```
+
 JSON output:
 
 ```bash
@@ -35,6 +43,20 @@ tstack agent plan "Build API backend" --no-uiux --no-deployment
 - Quality, Security, and Performance
 - Release Readiness
 - Deployment Plan
+
+## Agent Catalog
+
+TStack includes 50+ specialized agent definitions across:
+
+- Engineering
+- Business
+- Data and AI
+- Design
+- Operations
+- Governance
+- Orchestration
+
+Every agent definition includes role, category, responsibilities, permissions, and approval boundaries.
 
 ## Safety Model
 

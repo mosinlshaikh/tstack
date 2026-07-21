@@ -81,6 +81,8 @@ TStack can generate approval-gated agentic delivery plans from discovery to depl
 ```bash
 tstack agent plan "Build a SaaS CRM with advanced UI/UX"
 tstack agent plan "Build a SaaS CRM" --format json
+tstack agent catalog
+tstack agent show ui-ux-agent
 ```
 
 Current mode is **plan-only**. It does not scrape private sources, edit code, run SSH, or deploy without explicit future approval controls.

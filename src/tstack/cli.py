@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from tstack import __version__
-from tstack.agentic import agent_plan_json, agent_plan_markdown, build_agent_plan
+from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, build_agent_plan, get_agent, list_agents
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
@@ -117,6 +117,14 @@ def _handle_agent(args: argparse.Namespace) -> int:
     if args.agent_command == "plan":
         plan = build_agent_plan(args.goal, include_uiux=not args.no_uiux, include_deployment=not args.no_deployment)
         _write_output(agent_plan_json(plan) if args.format == "json" else agent_plan_markdown(plan), args.output)
+        return 0
+    if args.agent_command == "catalog":
+        agents = list_agents(args.category)
+        _write_output(agent_catalog_json(agents) if args.format == "json" else agent_catalog_markdown(agents), args.output)
+        return 0
+    if args.agent_command == "show":
+        agent = get_agent(args.agent_id)
+        _write_output(agent_catalog_json((agent,)) if args.format == "json" else agent_catalog_markdown((agent,)), args.output)
         return 0
     raise ValueError(f"unknown agent command: {args.agent_command}")
 
@@ -380,6 +388,16 @@ def build_parser() -> argparse.ArgumentParser:
     agent_item.add_argument("goal")
     agent_item.add_argument("--no-uiux", action="store_true")
     agent_item.add_argument("--no-deployment", action="store_true")
+    agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    agent_item.add_argument("--output", "-o")
+    agent_item.set_defaults(handler=_handle_agent)
+    agent_item = agent_subparsers.add_parser("catalog", help="List specialized TStack agents")
+    agent_item.add_argument("--category")
+    agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    agent_item.add_argument("--output", "-o")
+    agent_item.set_defaults(handler=_handle_agent)
+    agent_item = agent_subparsers.add_parser("show", help="Show one specialized TStack agent")
+    agent_item.add_argument("agent_id")
     agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     agent_item.add_argument("--output", "-o")
     agent_item.set_defaults(handler=_handle_agent)

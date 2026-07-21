@@ -6,6 +6,18 @@ from dataclasses import asdict, dataclass
 
 
 AGENT_PLAN_SCHEMA = "tstack-agent-plan/v1"
+AGENT_CATALOG_SCHEMA = "tstack-agent-catalog/v1"
+
+
+@dataclass(frozen=True)
+class AgentDefinition:
+    id: str
+    name: str
+    category: str
+    responsibilities: tuple[str, ...]
+    permissions: tuple[str, ...]
+    approval_required: bool = True
+    execution_allowed: bool = False
 
 
 @dataclass(frozen=True)
@@ -29,6 +41,90 @@ class AgentPlan:
     verdict: str
     phases: tuple[AgentPhase, ...]
     guardrails: tuple[str, ...]
+
+
+AGENT_CATALOG: tuple[AgentDefinition, ...] = (
+    AgentDefinition("architect-agent", "Architect Agent", "engineering", ("system architecture", "API boundaries", "data modeling", "technical tradeoffs"), ("read-repo", "write-plan")),
+    AgentDefinition("developer-agent", "Developer Agent", "engineering", ("implementation planning", "code generation proposals", "refactoring plans", "bug fix plans"), ("read-repo", "write-plan")),
+    AgentDefinition("qa-agent", "QA Agent", "engineering", ("test planning", "regression analysis", "smoke testing", "bug triage"), ("read-repo", "run-local-tests-plan")),
+    AgentDefinition("security-agent", "Security Agent", "engineering", ("secret scanning", "threat modeling", "dependency risk", "secure coding review"), ("read-repo", "write-security-report")),
+    AgentDefinition("performance-agent", "Performance Agent", "engineering", ("performance budgets", "profiling plans", "capacity risks", "latency review"), ("read-repo", "write-plan")),
+    AgentDefinition("documentation-agent", "Documentation Agent", "engineering", ("README updates", "API docs", "release notes", "user guides"), ("read-repo", "write-plan")),
+    AgentDefinition("release-agent", "Release Agent", "engineering", ("release planning", "versioning", "changelog", "rollback readiness"), ("read-repo", "write-release-plan")),
+    AgentDefinition("supply-chain-agent", "Supply Chain Agent", "engineering", ("SBOM", "checksums", "attestations", "artifact verification"), ("read-artifacts", "write-evidence")),
+    AgentDefinition("knowledge-agent", "Knowledge Agent", "engineering", ("knowledge search", "language guidance", "best-practice retrieval", "pack validation"), ("read-knowledge",)),
+    AgentDefinition("research-agent", "Research Agent", "business", ("public research planning", "competitor analysis", "source logging", "requirements evidence"), ("read-approved-sources",)),
+    AgentDefinition("product-agent", "Product Agent", "business", ("requirements", "feature scope", "user stories", "prioritization"), ("write-plan",)),
+    AgentDefinition("business-analyst-agent", "Business Analyst Agent", "business", ("process mapping", "business rules", "stakeholder workflows", "ROI framing"), ("write-plan",)),
+    AgentDefinition("crm-agent", "CRM Agent", "business", ("leads", "customers", "pipelines", "support workflows"), ("write-plan",)),
+    AgentDefinition("erp-agent", "ERP Agent", "business", ("inventory", "procurement", "billing", "operations workflows"), ("write-plan",)),
+    AgentDefinition("finance-agent", "Finance Agent", "business", ("billing", "financial reports", "forecasting", "payment workflows"), ("write-plan",)),
+    AgentDefinition("hr-agent", "HR Agent", "business", ("attendance", "payroll", "employee records", "HR workflows"), ("write-plan",)),
+    AgentDefinition("support-agent", "Customer Support Agent", "business", ("ticketing", "FAQ", "support automation", "escalation paths"), ("write-plan",)),
+    AgentDefinition("marketing-agent", "Marketing Agent", "business", ("landing pages", "SEO", "campaigns", "content planning"), ("write-plan",)),
+    AgentDefinition("analytics-agent", "Analytics Agent", "data-ai", ("dashboards", "KPI reports", "data quality", "business metrics"), ("read-approved-data", "write-report")),
+    AgentDefinition("data-engineering-agent", "Data Engineering Agent", "data-ai", ("ETL plans", "data cleaning", "pipeline design", "schema mapping"), ("write-plan",)),
+    AgentDefinition("ai-chatbot-agent", "AI Chatbot Agent", "data-ai", ("chatbot flows", "RAG planning", "tool routing", "safety rules"), ("write-plan",)),
+    AgentDefinition("voice-agent", "Voice Assistant Agent", "data-ai", ("speech workflows", "voice commands", "transcription plans", "voice UX"), ("write-plan",)),
+    AgentDefinition("vision-agent", "Vision Agent", "data-ai", ("OCR", "image analysis", "visual QA", "document extraction"), ("write-plan",)),
+    AgentDefinition("translation-agent", "Translation Agent", "data-ai", ("translation workflows", "localization", "language QA", "tone adaptation"), ("write-plan",)),
+    AgentDefinition("recommendation-agent", "Recommendation Agent", "data-ai", ("recommendation logic", "ranking plans", "feedback loops", "evaluation"), ("write-plan",)),
+    AgentDefinition("semantic-search-agent", "Semantic Search Agent", "data-ai", ("indexing", "retrieval", "embedding strategy", "search evaluation"), ("write-plan",)),
+    AgentDefinition("ui-ux-agent", "UI/UX Agent", "design", ("user flows", "wireframes", "interaction states", "responsive UX"), ("write-design-plan",)),
+    AgentDefinition("design-system-agent", "Design System Agent", "design", ("tokens", "components", "visual consistency", "theming"), ("write-design-plan",)),
+    AgentDefinition("accessibility-agent", "Accessibility Agent", "design", ("WCAG checks", "keyboard flows", "contrast", "screen reader review"), ("write-a11y-report")),
+    AgentDefinition("frontend-agent", "Frontend Agent", "design", ("frontend architecture", "component planning", "state management", "responsive UI"), ("write-plan",)),
+    AgentDefinition("backend-agent", "Backend Agent", "engineering", ("API design", "service boundaries", "database access", "background jobs"), ("write-plan",)),
+    AgentDefinition("database-agent", "Database Agent", "engineering", ("schema design", "migrations", "indexes", "data integrity"), ("write-plan",)),
+    AgentDefinition("auth-agent", "Authentication Agent", "engineering", ("login flows", "sessions", "RBAC", "identity provider integration"), ("write-plan",)),
+    AgentDefinition("admin-panel-agent", "Admin Panel Agent", "engineering", ("admin workflows", "moderation tools", "operations screens", "permissions"), ("write-plan",)),
+    AgentDefinition("mobile-agent", "Mobile Agent", "engineering", ("mobile UX", "offline behavior", "app architecture", "release stores"), ("write-plan",)),
+    AgentDefinition("seo-agent", "SEO Agent", "business", ("metadata", "structured data", "content strategy", "crawlability"), ("write-plan",)),
+    AgentDefinition("devops-agent", "DevOps Agent", "operations", ("Docker", "CI/CD", "deployment scripts", "environment strategy"), ("write-plan",)),
+    AgentDefinition("monitoring-agent", "Monitoring Agent", "operations", ("logs", "metrics", "alerts", "SLOs"), ("write-plan",)),
+    AgentDefinition("backup-agent", "Backup Agent", "operations", ("backup plans", "restore tests", "retention", "disaster recovery"), ("write-plan",)),
+    AgentDefinition("rollback-agent", "Rollback Agent", "operations", ("rollback plans", "release safety", "recovery drills", "failure playbooks"), ("write-plan",)),
+    AgentDefinition("deployment-agent", "Deployment Agent", "operations", ("deployment runbooks", "environment checks", "post-release validation", "release sequencing"), ("write-plan")),
+    AgentDefinition("operations-agent", "Operations Agent", "operations", ("incident response", "runbooks", "maintenance", "operational readiness"), ("write-plan")),
+    AgentDefinition("governance-agent", "Governance Agent", "governance", ("approval workflows", "policy management", "audit controls", "risk register"), ("write-plan",)),
+    AgentDefinition("rbac-agent", "RBAC Agent", "governance", ("roles", "permissions", "access reviews", "least privilege"), ("write-plan",)),
+    AgentDefinition("audit-agent", "Audit Agent", "governance", ("audit logs", "evidence trails", "compliance reporting", "change history"), ("write-report",)),
+    AgentDefinition("compliance-agent", "Compliance Agent", "governance", ("compliance mapping", "control evidence", "policy checks", "exception tracking"), ("write-report",)),
+    AgentDefinition("policy-agent", "Policy Agent", "governance", ("policy as code", "exceptions", "gates", "allowlists"), ("write-plan",)),
+    AgentDefinition("orchestrator-agent", "Orchestrator Agent", "orchestration", ("agent routing", "conflict resolution", "final decision", "human handoff"), ("coordinate-agents",)),
+    AgentDefinition("website-builder-agent", "Website Builder Agent", "orchestration", ("site requirements", "sitemap", "frontend/backend plan", "deployment plan"), ("coordinate-agents",)),
+    AgentDefinition("scraping-agent", "Scraping Agent", "orchestration", ("approved public scraping plans", "source rules", "robots review", "data extraction plan"), ("write-plan",)),
+    AgentDefinition("integration-agent", "Integration Agent", "orchestration", ("third-party APIs", "webhooks", "sync jobs", "error handling"), ("write-plan",)),
+)
+
+
+def list_agents(category: str | None = None) -> tuple[AgentDefinition, ...]:
+    agents = AGENT_CATALOG
+    if category:
+        agents = tuple(agent for agent in agents if agent.category == category)
+    return tuple(sorted(agents, key=lambda item: (item.category, item.id)))
+
+
+def get_agent(agent_id: str) -> AgentDefinition:
+    for agent in AGENT_CATALOG:
+        if agent.id == agent_id:
+            return agent
+    raise KeyError(f"unknown agent: {agent_id}")
+
+
+def agent_catalog_json(agents: tuple[AgentDefinition, ...]) -> str:
+    return json.dumps({"schema": AGENT_CATALOG_SCHEMA, "count": len(agents), "agents": [asdict(agent) for agent in agents]}, indent=2, sort_keys=True) + "\n"
+
+
+def agent_catalog_markdown(agents: tuple[AgentDefinition, ...]) -> str:
+    lines = ["# TStack Agent Catalog", "", f"- Agents: {len(agents)}", ""]
+    current = None
+    for agent in agents:
+        if agent.category != current:
+            current = agent.category
+            lines.extend([f"## {current.title()}", ""])
+        lines.append(f"- `{agent.id}` - {agent.name}: {', '.join(agent.responsibilities)}")
+    return "\n".join(lines) + "\n"
 
 
 def build_agent_plan(goal: str, *, mode: str = "plan-only", include_uiux: bool = True, include_deployment: bool = True) -> AgentPlan:
