@@ -63,7 +63,23 @@
       "status": "planned"
     }
   ],
-  "packs": [],
+  "packs": [
+    {
+      "id": "language-python",
+      "title": "Python Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/python/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    }
+  ],
   "compatibility": {
     "minimum_tstack_version": "0.16.0",
     "knowledge_schema": "tstack-knowledge-pack/v1"

@@ -1,0 +1,77 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-python",
+  "title": "Python Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "python",
+  "audience": [
+    "software engineers",
+    "technical leads",
+    "security reviewers",
+    "QA engineers"
+  ],
+  "summary": "Foundational Python engineering guidance for architecture, testing, performance, security, and production readiness.",
+  "topics": [
+    {
+      "id": "overview",
+      "title": "Python Overview",
+      "path": "overview.md"
+    },
+    {
+      "id": "security",
+      "title": "Python Security",
+      "path": "security.md"
+    },
+    {
+      "id": "performance",
+      "title": "Python Performance",
+      "path": "performance.md"
+    },
+    {
+      "id": "testing",
+      "title": "Python Testing",
+      "path": "testing.md"
+    },
+    {
+      "id": "production",
+      "title": "Python Production",
+      "path": "production.md"
+    }
+  ],
+  "signals": {
+    "project_files": [
+      "pyproject.toml",
+      "requirements.txt",
+      "setup.py",
+      "setup.cfg",
+      "tox.ini",
+      "noxfile.py"
+    ],
+    "test_patterns": [
+      "tests/",
+      "test_*.py",
+      "*_test.py"
+    ],
+    "lockfiles": [
+      "requirements.lock",
+      "poetry.lock",
+      "uv.lock",
+      "Pipfile.lock"
+    ]
+  },
+  "quality_gates": [
+    "declared-python-version",
+    "dependency-lock-or-resolution-strategy",
+    "automated-tests",
+    "lint-or-static-analysis",
+    "security-review-for-input-and-secrets",
+    "production-runtime-plan"
+  ],
+  "limitations": [
+    "This pack provides curated engineering guidance, not a complete export of model knowledge.",
+    "Framework-specific details should live in dedicated framework packs.",
+    "Runtime behavior may vary across Python implementations and deployment targets."
+  ]
+}
