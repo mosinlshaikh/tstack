@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tstack import __version__
 from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, agent_stats, agent_stats_json, agent_stats_markdown, build_agent_plan, build_orchestration_plan, failure_route_json, failure_route_markdown, get_agent, list_agents, orchestration_json, orchestration_markdown, route_failure, select_agents_for_goal
+from tstack.approval import approval_decision_json, approval_decision_markdown, approval_request_json, approval_request_markdown, create_approval_request, decide_approval
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
@@ -143,6 +144,18 @@ def _handle_agent(args: argparse.Namespace) -> int:
         _write_output(failure_route_json(route) if args.format == "json" else failure_route_markdown(route), args.output)
         return 0
     raise ValueError(f"unknown agent command: {args.agent_command}")
+
+
+def _handle_approval(args: argparse.Namespace) -> int:
+    if args.approval_command == "request":
+        request = create_approval_request(args.action, request_id=args.request_id)
+        _write_output(approval_request_json(request) if args.format == "json" else approval_request_markdown(request), args.output)
+        return 0
+    if args.approval_command == "decide":
+        decision = decide_approval(Path(args.request), approved=args.approved, approver=args.approver, reason=args.reason)
+        _write_output(approval_decision_json(decision) if args.format == "json" else approval_decision_markdown(decision), args.output)
+        return 0
+    raise ValueError(f"unknown approval command: {args.approval_command}")
 
 
 def _handle_human(args: argparse.Namespace) -> int:
@@ -437,6 +450,22 @@ def build_parser() -> argparse.ArgumentParser:
     agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     agent_item.add_argument("--output", "-o")
     agent_item.set_defaults(handler=_handle_agent)
+    item = subparsers.add_parser("approval", help="Create and record approval-gated execution decisions")
+    approval_subparsers = item.add_subparsers(dest="approval_command", required=True)
+    approval_item = approval_subparsers.add_parser("request", help="Create an approval request for a proposed action")
+    approval_item.add_argument("action")
+    approval_item.add_argument("--request-id", default="APPROVAL-0001")
+    approval_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    approval_item.add_argument("--output", "-o")
+    approval_item.set_defaults(handler=_handle_approval)
+    approval_item = approval_subparsers.add_parser("decide", help="Record a human approval or rejection for a request")
+    approval_item.add_argument("request")
+    approval_item.add_argument("--approved", action="store_true")
+    approval_item.add_argument("--approver", required=True)
+    approval_item.add_argument("--reason", required=True)
+    approval_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    approval_item.add_argument("--output", "-o")
+    approval_item.set_defaults(handler=_handle_approval)
     item = subparsers.add_parser("human", help="Parse human language and typo-tolerant user intent")
     human_subparsers = item.add_subparsers(dest="human_command", required=True)
     human_item = human_subparsers.add_parser("languages", help="List supported human language registry")

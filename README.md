@@ -91,6 +91,16 @@ tstack agent route-failure "pytest failed in test_cli"
 
 Current mode is **plan-only**. It does not scrape private sources, edit code, run SSH, or deploy without explicit future approval controls.
 
+## Approval Engine
+
+TStack can create approval requests and record human approval decisions while keeping execution blocked.
+
+```bash
+tstack approval request "Deploy to production over SSH"
+tstack approval request "Update README" --format json --output approval.json
+tstack approval decide approval.json --approved --approver Mosin --reason "Reviewed and accepted."
+```
+
 ## Human Language Understanding
 
 TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions. The current human-language registry tracks 100+ major languages and can be expanded over time.
