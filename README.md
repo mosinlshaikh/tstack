@@ -115,6 +115,8 @@ Runtime Kernel:
 tstack runtime request filesystem.move "Organize Downloads" --target Downloads --format json
 tstack runtime decide request.json --approved --approver Mosin --reason "Reviewed plan." --format json
 tstack runtime audit request.json --decision decision.json --outcome approved --format json
+tstack audit-log append .tstack/audit.jsonl event.json
+tstack audit-log verify .tstack/audit.jsonl
 ```
 
 ## Local Desktop OS

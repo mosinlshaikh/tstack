@@ -8,6 +8,7 @@ from pathlib import Path
 from tstack import __version__
 from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, agent_stats, agent_stats_json, agent_stats_markdown, build_agent_plan, build_orchestration_plan, failure_route_json, failure_route_markdown, get_agent, list_agents, orchestration_json, orchestration_markdown, route_failure, select_agents_for_goal
 from tstack.approval import approval_decision_json, approval_decision_markdown, approval_readiness_json, approval_readiness_markdown, approval_request_json, approval_request_markdown, create_approval_request, decide_approval, evaluate_readiness
+from tstack.audit_log import append_audit_event, audit_log_json, audit_log_markdown, verify_audit_log
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.bug import bug_report_json, bug_report_markdown, find_bugs
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
@@ -200,6 +201,18 @@ def _handle_runtime(args: argparse.Namespace) -> int:
         _write_output(runtime_json(event) if args.format == "json" else runtime_markdown(event), args.output)
         return 0
     raise ValueError(f"unknown runtime command: {args.runtime_command}")
+
+
+def _handle_audit_log(args: argparse.Namespace) -> int:
+    if args.audit_log_command == "append":
+        entry = append_audit_event(Path(args.log), Path(args.event))
+        _write_output(audit_log_json(entry) if args.format == "json" else audit_log_markdown(entry), args.output)
+        return 0
+    if args.audit_log_command == "verify":
+        result = verify_audit_log(Path(args.log))
+        _write_output(audit_log_json(result) if args.format == "json" else audit_log_markdown(result), args.output)
+        return 0 if result.valid else 18
+    raise ValueError(f"unknown audit-log command: {args.audit_log_command}")
 
 
 def _handle_desktop(args: argparse.Namespace) -> int:
@@ -626,6 +639,21 @@ def build_parser() -> argparse.ArgumentParser:
     runtime_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     runtime_item.add_argument("--output", "-o")
     runtime_item.set_defaults(handler=_handle_runtime)
+
+    item = subparsers.add_parser("audit-log", help="Append and verify tamper-evident runtime audit logs")
+    audit_log_subparsers = item.add_subparsers(dest="audit_log_command", required=True)
+    audit_log_item = audit_log_subparsers.add_parser("append", help="Append a runtime audit event to a hash-chain log")
+    audit_log_item.add_argument("log")
+    audit_log_item.add_argument("event")
+    audit_log_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    audit_log_item.add_argument("--output", "-o")
+    audit_log_item.set_defaults(handler=_handle_audit_log)
+    audit_log_item = audit_log_subparsers.add_parser("verify", help="Verify an audit log hash chain")
+    audit_log_item.add_argument("log")
+    audit_log_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    audit_log_item.add_argument("--output", "-o")
+    audit_log_item.set_defaults(handler=_handle_audit_log)
+
     item = subparsers.add_parser("desktop", help="Inspect local-first desktop Agentic OS blueprint")
     desktop_subparsers = item.add_subparsers(dest="desktop_command", required=True)
     desktop_item = desktop_subparsers.add_parser("blueprint", help="Show local-first desktop system architecture")
