@@ -1,8 +1,4 @@
-"""Extensible rule discovery and execution for TStack.
-
-Installed Python plugins use the ``tstack.rules`` entry-point group. Projects may
-also define non-executable declarative rules under ``.tstack/rules/*.json``.
-"""
+"""Extensible rule discovery, trust enforcement, and execution for TStack."""
 
 from __future__ import annotations
 
@@ -39,12 +35,38 @@ class PluginDescriptor:
 
 
 class RulePlugin(Protocol):
-    """Public SDK contract for installed rule plugins."""
-
     name: str
     version: str
-
     def scan(self, root: Path, relative_files: frozenset[str]) -> Iterable[PluginFinding | dict]: ...
+
+
+def default_trust_json() -> str:
+    return json.dumps({"mode": "allowlist", "allowed": []}, indent=2, sort_keys=True) + "\n"
+
+
+def _trust_policy(root: Path) -> dict:
+    path = root / ".tstack" / "plugin-trust.json"
+    if not path.is_file():
+        return {"mode": "permissive", "allowed": []}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("mode") not in {"permissive", "allowlist"} or not isinstance(payload.get("allowed"), list):
+        raise ValueError(f"invalid plugin trust policy: {path}")
+    return payload
+
+
+def _entry_identity(entry) -> tuple[str, str, str]:
+    version = str(getattr(getattr(entry, "dist", None), "version", "0"))
+    integrity = hashlib.sha256(f"{entry.name}\0{entry.value}\0{version}".encode()).hexdigest()
+    return entry.name, version, integrity
+
+
+def _is_trusted(policy: dict, name: str, integrity: str) -> bool:
+    if policy["mode"] == "permissive":
+        return True
+    for item in policy["allowed"]:
+        if isinstance(item, dict) and item.get("name") == name and item.get("integrity") == integrity:
+            return True
+    return False
 
 
 def _validate_finding(item: PluginFinding | dict, plugin_name: str) -> PluginFinding:
@@ -55,15 +77,7 @@ def _validate_finding(item: PluginFinding | dict, plugin_name: str) -> PluginFin
         missing = required - item.keys()
         if missing:
             raise ValueError(f"plugin {plugin_name!r} finding missing fields: {sorted(missing)}")
-        finding = PluginFinding(
-            rule_id=str(item["rule_id"]),
-            severity=str(item["severity"]).lower(),
-            title=str(item["title"]),
-            path=str(item["path"]) if item.get("path") is not None else None,
-            evidence=str(item["evidence"]),
-            remediation=str(item["remediation"]),
-            plugin=plugin_name,
-        )
+        finding = PluginFinding(str(item["rule_id"]), str(item["severity"]).lower(), str(item["title"]), str(item["path"]) if item.get("path") is not None else None, str(item["evidence"]), str(item["remediation"]), plugin_name)
     else:
         raise ValueError(f"plugin {plugin_name!r} returned unsupported finding type")
     if not RULE_ID.fullmatch(finding.rule_id):
@@ -78,54 +92,43 @@ def _declarative_rules(root: Path, relative_files: frozenset[str]) -> tuple[list
     if not rules_dir.is_dir():
         return [], None
     findings: list[PluginFinding] = []
-    digest = hashlib.sha256()
-    rule_count = 0
+    digest = hashlib.sha256(); rule_count = 0
     for rule_path in sorted(rules_dir.glob("*.json")):
-        raw = rule_path.read_bytes()
-        digest.update(rule_path.name.encode()); digest.update(b"\0"); digest.update(raw)
-        payload = json.loads(raw.decode("utf-8"))
-        rules = payload.get("rules")
+        raw = rule_path.read_bytes(); digest.update(rule_path.name.encode()); digest.update(b"\0"); digest.update(raw)
+        payload = json.loads(raw.decode("utf-8")); rules = payload.get("rules")
         if not isinstance(rules, list):
             raise ValueError(f"declarative plugin file requires a rules array: {rule_path}")
         for rule in rules:
             if not isinstance(rule, dict):
                 raise ValueError(f"invalid rule object in {rule_path}")
             rule_count += 1
-            rule_id = str(rule.get("id", ""))
-            severity = str(rule.get("severity", "medium")).lower()
-            title = str(rule.get("title", rule_id))
-            pattern = str(rule.get("path_regex", ""))
-            remediation = str(rule.get("remediation", "Review and resolve this custom policy finding."))
+            rule_id = str(rule.get("id", "")); severity = str(rule.get("severity", "medium")).lower(); title = str(rule.get("title", rule_id)); pattern = str(rule.get("path_regex", "")); remediation = str(rule.get("remediation", "Review and resolve this custom policy finding."))
             if not RULE_ID.fullmatch(rule_id) or severity not in SEVERITIES or not pattern:
                 raise ValueError(f"invalid declarative rule in {rule_path}: {rule_id!r}")
             compiled = re.compile(pattern)
             for relative in sorted(relative_files):
                 if compiled.search(relative):
                     findings.append(PluginFinding(rule_id, severity, title, relative, f"Path matched custom rule regex: {pattern}", remediation, "project-rules"))
-    descriptor = PluginDescriptor("project-rules", "1", str(rules_dir), digest.hexdigest(), rule_count)
-    return findings, descriptor
+    return findings, PluginDescriptor("project-rules", "1", str(rules_dir), digest.hexdigest(), rule_count)
 
 
 def run_plugins(root: Path, relative_files: set[str]) -> tuple[tuple[PluginFinding, ...], tuple[PluginDescriptor, ...]]:
-    """Run declarative project rules and explicitly installed Python entry points."""
     frozen_files = frozenset(relative_files)
     findings, local_descriptor = _declarative_rules(root, frozen_files)
     descriptors: list[PluginDescriptor] = [local_descriptor] if local_descriptor else []
+    policy = _trust_policy(root)
 
-    selected = entry_points().select(group="tstack.rules")
-    for entry in sorted(selected, key=lambda value: value.name):
-        plugin = entry.load()
-        plugin = plugin() if isinstance(plugin, type) else plugin
-        name = str(getattr(plugin, "name", entry.name))
-        version = str(getattr(plugin, "version", "0"))
-        raw_findings = list(plugin.scan(root, frozen_files))
-        validated = [_validate_finding(item, name) for item in raw_findings]
+    for entry in sorted(entry_points().select(group="tstack.rules"), key=lambda value: value.name):
+        entry_name, dist_version, integrity = _entry_identity(entry)
+        if not _is_trusted(policy, entry_name, integrity):
+            raise ValueError(f"untrusted plugin blocked before load: {entry_name} integrity={integrity}")
+        plugin = entry.load(); plugin = plugin() if isinstance(plugin, type) else plugin
+        name = str(getattr(plugin, "name", entry_name)); version = str(getattr(plugin, "version", dist_version))
+        validated = [_validate_finding(item, name) for item in list(plugin.scan(root, frozen_files))]
         findings.extend(validated)
-        integrity = hashlib.sha256(f"{entry.value}\0{version}".encode()).hexdigest()
         descriptors.append(PluginDescriptor(name, version, entry.value, integrity, len(validated)))
 
-    findings.sort(key=lambda item: (item.rule_id, item.path or "", item.plugin))
-    descriptors.sort(key=lambda item: item.name)
+    findings.sort(key=lambda item: (item.rule_id, item.path or "", item.plugin)); descriptors.sort(key=lambda item: item.name)
     return tuple(findings), tuple(descriptors)
 
 
