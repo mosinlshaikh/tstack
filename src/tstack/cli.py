@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from tstack import __version__
+from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
 from tstack.knowledge import get_pack, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, validate_knowledge, validation_json, validation_markdown
@@ -81,6 +82,22 @@ def _handle_knowledge(args: argparse.Namespace) -> int:
         _write_output(validation_json(result) if args.format == "json" else validation_markdown(result), args.output)
         return 0 if result.valid else 12
     raise ValueError(f"unknown knowledge command: {args.knowledge_command}")
+
+
+def _handle_automation(args: argparse.Namespace) -> int:
+    if args.automation_command == "list":
+        capabilities = list_capabilities()
+        _write_output(registry_json(capabilities) if args.format == "json" else registry_markdown(capabilities), args.output)
+        return 0
+    if args.automation_command == "show":
+        capability = get_capability(args.capability_id)
+        _write_output(registry_json((capability,)) if args.format == "json" else registry_markdown((capability,)), args.output)
+        return 0
+    if args.automation_command == "validate":
+        result = validate_automation()
+        _write_output(automation_validation_json(result) if args.format == "json" else automation_validation_markdown(result), args.output)
+        return 0 if result.valid else 14
+    raise ValueError(f"unknown automation command: {args.automation_command}")
 
 
 def _scan(args: argparse.Namespace):
@@ -258,6 +275,21 @@ def build_parser() -> argparse.ArgumentParser:
     knowledge_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     knowledge_item.add_argument("--output", "-o")
     knowledge_item.set_defaults(handler=_handle_knowledge)
+    item = subparsers.add_parser("automation", help="Inspect TStack automation and plugin safety capabilities")
+    automation_subparsers = item.add_subparsers(dest="automation_command", required=True)
+    automation_item = automation_subparsers.add_parser("list", help="List registered automation capabilities")
+    automation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    automation_item.add_argument("--output", "-o")
+    automation_item.set_defaults(handler=_handle_automation)
+    automation_item = automation_subparsers.add_parser("show", help="Show one automation capability")
+    automation_item.add_argument("capability_id")
+    automation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    automation_item.add_argument("--output", "-o")
+    automation_item.set_defaults(handler=_handle_automation)
+    automation_item = automation_subparsers.add_parser("validate", help="Validate automation safety registry")
+    automation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    automation_item.add_argument("--output", "-o")
+    automation_item.set_defaults(handler=_handle_automation)
     item = subparsers.add_parser("scan", help="Audit a project and enforce policy"); _add_scan_limits(item); item.add_argument("--format", choices=("markdown", "json", "sarif"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--policy"); item.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold"); item.set_defaults(handler=_handle_scan)
     _add_platform_parser(subparsers, "platform-audit", "all", "Audit Docker and Kubernetes security controls")
     _add_platform_parser(subparsers, "docker-audit", "docker", "Audit Dockerfile security and reproducibility")

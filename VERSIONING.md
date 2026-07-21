@@ -73,6 +73,7 @@ Current contract:
 - `11`: decision-plan review or hold result.
 - `12`: knowledge validation failure.
 - `13`: SSH automation plan blocked by policy.
+- `14`: automation registry validation failure.
 
 ## Schema Versioning
 
@@ -87,6 +88,7 @@ Versioned schemas include:
 - Baseline.
 - Knowledge index.
 - Plugin rules.
+- Automation registry.
 
 Schema changes must be additive when possible. Breaking schema changes require a new schema identifier.
 

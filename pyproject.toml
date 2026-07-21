@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ttrl-tstack"
-version = "0.16.0"
+version = "0.17.0"
 description = "TTRL evidence-driven engineering workflows, supply-chain verification, learning and decision brains, and an Engineering Knowledge Graph"
 readme = "README.md"
 requires-python = ">=3.10"
