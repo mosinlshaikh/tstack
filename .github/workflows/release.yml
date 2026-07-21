@@ -33,7 +33,7 @@ jobs:
           tstack validate
       - name: Build distributions
         run: python -m build
-      - name: Generate supply-chain metadata
+      - name: Generate dual-hash supply-chain metadata
         run: |
           tstack sbom --output dist/sbom.cdx.json
           tstack manifest dist --checksums
@@ -46,6 +46,7 @@ jobs:
             dist/*.tar.gz
             dist/manifest.json
             dist/checksums.sha256
+            dist/checksums.sha3-256
             dist/sbom.cdx.json
       - uses: actions/upload-artifact@v4
         with:
