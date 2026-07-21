@@ -34,6 +34,15 @@ class KnowledgeValidationResult:
     errors: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class KnowledgeStats:
+    total_packs: int
+    language_packs: int
+    categories: dict[str, int]
+    statuses: dict[str, int]
+    languages: tuple[str, ...]
+
+
 def knowledge_root() -> Path:
     return Path(__file__).resolve().parents[2] / "knowledge"
 
@@ -134,6 +143,56 @@ def pack_markdown(pack: KnowledgePack) -> str:
     lines.extend(["", pack.summary, "", "## Topics", ""])
     for topic in pack.topics:
         lines.append(f"- `{topic.id}` - {topic.title} ({topic.path})")
+    return "\n".join(lines) + "\n"
+
+
+def knowledge_stats(packs: tuple[KnowledgePack, ...] | None = None) -> KnowledgeStats:
+    items = packs or list_packs()
+    categories: dict[str, int] = {}
+    statuses: dict[str, int] = {}
+    languages: list[str] = []
+    for pack in items:
+        categories[pack.category] = categories.get(pack.category, 0) + 1
+        statuses[pack.status] = statuses.get(pack.status, 0) + 1
+        if pack.language:
+            languages.append(pack.language)
+    return KnowledgeStats(
+        total_packs=len(items),
+        language_packs=len(languages),
+        categories=dict(sorted(categories.items())),
+        statuses=dict(sorted(statuses.items())),
+        languages=tuple(sorted(languages)),
+    )
+
+
+def stats_json(stats: KnowledgeStats) -> str:
+    return json.dumps(
+        {
+            "schema": "tstack-knowledge-stats/v1",
+            "total_packs": stats.total_packs,
+            "language_packs": stats.language_packs,
+            "categories": stats.categories,
+            "statuses": stats.statuses,
+            "languages": list(stats.languages),
+        },
+        indent=2,
+    ) + "\n"
+
+
+def stats_markdown(stats: KnowledgeStats) -> str:
+    lines = [
+        "# TStack Knowledge Stats",
+        "",
+        f"- Total packs: {stats.total_packs}",
+        f"- Language packs: {stats.language_packs}",
+        "",
+        "## Categories",
+        "",
+    ]
+    lines.extend(f"- `{category}`: {count}" for category, count in stats.categories.items())
+    lines.extend(["", "## Statuses", ""])
+    lines.extend(f"- `{status}`: {count}" for status, count in stats.statuses.items())
+    lines.extend(["", "## Languages", "", ", ".join(stats.languages)])
     return "\n".join(lines) + "\n"
 
 

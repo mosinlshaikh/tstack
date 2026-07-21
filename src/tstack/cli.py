@@ -9,7 +9,7 @@ from tstack import __version__
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
-from tstack.knowledge import get_pack, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, validate_knowledge, validation_json, validation_markdown
+from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
@@ -81,6 +81,10 @@ def _handle_knowledge(args: argparse.Namespace) -> int:
         result = validate_knowledge()
         _write_output(validation_json(result) if args.format == "json" else validation_markdown(result), args.output)
         return 0 if result.valid else 12
+    if args.knowledge_command == "stats":
+        stats = knowledge_stats()
+        _write_output(stats_json(stats) if args.format == "json" else stats_markdown(stats), args.output)
+        return 0
     raise ValueError(f"unknown knowledge command: {args.knowledge_command}")
 
 
@@ -272,6 +276,10 @@ def build_parser() -> argparse.ArgumentParser:
     knowledge_item.add_argument("--output", "-o")
     knowledge_item.set_defaults(handler=_handle_knowledge)
     knowledge_item = knowledge_subparsers.add_parser("validate", help="Validate registered knowledge pack contracts")
+    knowledge_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    knowledge_item.add_argument("--output", "-o")
+    knowledge_item.set_defaults(handler=_handle_knowledge)
+    knowledge_item = knowledge_subparsers.add_parser("stats", help="Show knowledge pack counts and coverage")
     knowledge_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     knowledge_item.add_argument("--output", "-o")
     knowledge_item.set_defaults(handler=_handle_knowledge)

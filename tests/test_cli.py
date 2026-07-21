@@ -78,6 +78,15 @@ def test_knowledge_validate_json_is_machine_readable(capsys) -> None:
     assert payload["packs_checked"] >= 10
 
 
+def test_knowledge_stats_reports_language_pack_count(capsys) -> None:
+    assert main(["knowledge", "stats", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-knowledge-stats/v1"
+    assert payload["language_packs"] >= 55
+    assert payload["categories"]["languages"] == payload["language_packs"]
+    assert "python" in payload["languages"]
+
+
 def test_init_creates_project_contract(tmp_path, capsys) -> None:
     assert main(["init", str(tmp_path)]) == 0
     assert (tmp_path / ".tstack" / "config.json").is_file()
