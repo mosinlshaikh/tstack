@@ -83,6 +83,7 @@ tstack agent plan "Build a SaaS CRM with advanced UI/UX"
 tstack agent plan "Build a SaaS CRM" --format json
 tstack agent catalog
 tstack agent show ui-ux-agent
+tstack agent select "Medical Store Management System website with admin panel and deployment"
 ```
 
 Current mode is **plan-only**. It does not scrape private sources, edit code, run SSH, or deploy without explicit future approval controls.

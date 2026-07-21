@@ -43,6 +43,16 @@ class AgentPlan:
     guardrails: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class AgentSelection:
+    schema: str
+    goal: str
+    selected_agents: tuple[AgentDefinition, ...]
+    rationale: tuple[str, ...]
+    approval_required: bool = True
+    execution_allowed: bool = False
+
+
 AGENT_CATALOG: tuple[AgentDefinition, ...] = (
     AgentDefinition("architect-agent", "Architect Agent", "engineering", ("system architecture", "API boundaries", "data modeling", "technical tradeoffs"), ("read-repo", "write-plan")),
     AgentDefinition("developer-agent", "Developer Agent", "engineering", ("implementation planning", "code generation proposals", "refactoring plans", "bug fix plans"), ("read-repo", "write-plan")),
@@ -72,7 +82,7 @@ AGENT_CATALOG: tuple[AgentDefinition, ...] = (
     AgentDefinition("semantic-search-agent", "Semantic Search Agent", "data-ai", ("indexing", "retrieval", "embedding strategy", "search evaluation"), ("write-plan",)),
     AgentDefinition("ui-ux-agent", "UI/UX Agent", "design", ("user flows", "wireframes", "interaction states", "responsive UX"), ("write-design-plan",)),
     AgentDefinition("design-system-agent", "Design System Agent", "design", ("tokens", "components", "visual consistency", "theming"), ("write-design-plan",)),
-    AgentDefinition("accessibility-agent", "Accessibility Agent", "design", ("WCAG checks", "keyboard flows", "contrast", "screen reader review"), ("write-a11y-report")),
+    AgentDefinition("accessibility-agent", "Accessibility Agent", "design", ("WCAG checks", "keyboard flows", "contrast", "screen reader review"), ("write-a11y-report",)),
     AgentDefinition("frontend-agent", "Frontend Agent", "design", ("frontend architecture", "component planning", "state management", "responsive UI"), ("write-plan",)),
     AgentDefinition("backend-agent", "Backend Agent", "engineering", ("API design", "service boundaries", "database access", "background jobs"), ("write-plan",)),
     AgentDefinition("database-agent", "Database Agent", "engineering", ("schema design", "migrations", "indexes", "data integrity"), ("write-plan",)),
@@ -84,8 +94,8 @@ AGENT_CATALOG: tuple[AgentDefinition, ...] = (
     AgentDefinition("monitoring-agent", "Monitoring Agent", "operations", ("logs", "metrics", "alerts", "SLOs"), ("write-plan",)),
     AgentDefinition("backup-agent", "Backup Agent", "operations", ("backup plans", "restore tests", "retention", "disaster recovery"), ("write-plan",)),
     AgentDefinition("rollback-agent", "Rollback Agent", "operations", ("rollback plans", "release safety", "recovery drills", "failure playbooks"), ("write-plan",)),
-    AgentDefinition("deployment-agent", "Deployment Agent", "operations", ("deployment runbooks", "environment checks", "post-release validation", "release sequencing"), ("write-plan")),
-    AgentDefinition("operations-agent", "Operations Agent", "operations", ("incident response", "runbooks", "maintenance", "operational readiness"), ("write-plan")),
+    AgentDefinition("deployment-agent", "Deployment Agent", "operations", ("deployment runbooks", "environment checks", "post-release validation", "release sequencing"), ("write-plan",)),
+    AgentDefinition("operations-agent", "Operations Agent", "operations", ("incident response", "runbooks", "maintenance", "operational readiness"), ("write-plan",)),
     AgentDefinition("governance-agent", "Governance Agent", "governance", ("approval workflows", "policy management", "audit controls", "risk register"), ("write-plan",)),
     AgentDefinition("rbac-agent", "RBAC Agent", "governance", ("roles", "permissions", "access reviews", "least privilege"), ("write-plan",)),
     AgentDefinition("audit-agent", "Audit Agent", "governance", ("audit logs", "evidence trails", "compliance reporting", "change history"), ("write-report",)),
@@ -110,6 +120,64 @@ def get_agent(agent_id: str) -> AgentDefinition:
         if agent.id == agent_id:
             return agent
     raise KeyError(f"unknown agent: {agent_id}")
+
+
+def select_agents_for_goal(goal: str) -> AgentSelection:
+    cleaned_goal = goal.strip()
+    if not cleaned_goal:
+        raise ValueError("agent goal is required")
+    lowered = cleaned_goal.lower()
+    selected: set[str] = {"orchestrator-agent", "product-agent", "architect-agent", "security-agent", "qa-agent", "documentation-agent"}
+    rationale = ["Base delivery requires product, architecture, security, QA, documentation, and orchestration agents."]
+
+    def include(ids: tuple[str, ...], reason: str) -> None:
+        selected.update(ids)
+        rationale.append(reason)
+
+    if any(term in lowered for term in ("website", "landing", "web app", "frontend", "ui", "ux", "dashboard", "admin panel")):
+        include(("website-builder-agent", "ui-ux-agent", "design-system-agent", "accessibility-agent", "frontend-agent", "seo-agent"), "Website or UI wording requires design, frontend, accessibility, and SEO agents.")
+    if any(term in lowered for term in ("api", "backend", "database", "auth", "login", "crm", "erp", "management system")):
+        include(("backend-agent", "database-agent", "auth-agent", "admin-panel-agent"), "Application backend wording requires API, database, authentication, and admin workflow agents.")
+    if any(term in lowered for term in ("ai", "chatbot", "rag", "voice", "ocr", "image", "semantic", "recommendation", "translation")):
+        include(("ai-chatbot-agent", "semantic-search-agent", "voice-agent", "vision-agent", "recommendation-agent", "translation-agent"), "AI feature wording requires AI, retrieval, voice, vision, recommendation, or translation specialists.")
+    if any(term in lowered for term in ("data", "analytics", "dashboard", "kpi", "forecast", "report", "etl")):
+        include(("analytics-agent", "data-engineering-agent"), "Data or analytics wording requires analytics and data engineering agents.")
+    if any(term in lowered for term in ("deploy", "deployment", "docker", "ci", "cd", "monitor", "backup", "rollback", "devops")):
+        include(("devops-agent", "deployment-agent", "monitoring-agent", "backup-agent", "rollback-agent", "operations-agent", "release-agent", "supply-chain-agent"), "Deployment or operations wording requires DevOps, release, monitoring, backup, and rollback agents.")
+    if any(term in lowered for term in ("business", "billing", "invoice", "inventory", "payroll", "attendance", "hr", "support", "marketing")):
+        include(("business-analyst-agent", "crm-agent", "erp-agent", "finance-agent", "hr-agent", "support-agent", "marketing-agent"), "Business workflow wording requires business, CRM, ERP, finance, HR, support, or marketing agents.")
+    if any(term in lowered for term in ("governance", "rbac", "audit", "compliance", "policy", "approval")):
+        include(("governance-agent", "rbac-agent", "audit-agent", "compliance-agent", "policy-agent"), "Governance wording requires RBAC, audit, compliance, policy, and approval agents.")
+
+    agents = tuple(get_agent(agent_id) for agent_id in sorted(selected))
+    return AgentSelection(
+        schema="tstack-agent-selection/v1",
+        goal=cleaned_goal,
+        selected_agents=agents,
+        rationale=tuple(rationale),
+    )
+
+
+def agent_selection_json(selection: AgentSelection) -> str:
+    return json.dumps(asdict(selection), indent=2, sort_keys=True) + "\n"
+
+
+def agent_selection_markdown(selection: AgentSelection) -> str:
+    lines = [
+        "# TStack Agent Selection",
+        "",
+        f"- Goal: {selection.goal}",
+        f"- Agents selected: {len(selection.selected_agents)}",
+        f"- Approval required: {'yes' if selection.approval_required else 'no'}",
+        f"- Execution allowed: {'yes' if selection.execution_allowed else 'no'}",
+        "",
+        "## Selected Agents",
+        "",
+    ]
+    lines.extend(f"- `{agent.id}` - {agent.name} ({agent.category})" for agent in selection.selected_agents)
+    lines.extend(["", "## Rationale", ""])
+    lines.extend(f"- {reason}" for reason in selection.rationale)
+    return "\n".join(lines) + "\n"
 
 
 def agent_catalog_json(agents: tuple[AgentDefinition, ...]) -> str:

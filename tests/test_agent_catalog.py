@@ -11,6 +11,7 @@ def test_agent_catalog_has_50_specialized_agents() -> None:
     assert {"architect-agent", "developer-agent", "ui-ux-agent", "orchestrator-agent", "website-builder-agent"}.issubset(ids)
     assert all(agent.approval_required for agent in agents)
     assert all(not agent.execution_allowed for agent in agents)
+    assert all(isinstance(agent.permissions, tuple) for agent in agents)
 
 
 def test_agent_catalog_categories_are_present() -> None:

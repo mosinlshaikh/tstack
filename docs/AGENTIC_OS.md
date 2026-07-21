@@ -20,6 +20,7 @@ List specialized agents:
 tstack agent catalog
 tstack agent catalog --category engineering
 tstack agent show ui-ux-agent
+tstack agent select "Medical Store Management System website with admin panel and deployment"
 ```
 
 JSON output:
@@ -57,6 +58,12 @@ TStack includes 50+ specialized agent definitions across:
 - Orchestration
 
 Every agent definition includes role, category, responsibilities, permissions, and approval boundaries.
+
+## Agent Selection
+
+The orchestrator can select relevant agents from a goal. For example, a website goal can select website builder, UI/UX, frontend, backend, database, SEO, security, QA, release, and deployment agents.
+
+Selection is still plan-only and approval-gated.
 
 ## Safety Model
 
