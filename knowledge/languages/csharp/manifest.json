@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-csharp",
+  "title": "C# Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "csharp",
+  "audience": ["backend engineers", "desktop engineers", "cloud engineers", "technical leads"],
+  "summary": "Foundational C# and .NET guidance for services, desktop apps, testing, security, performance, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "C# Overview", "path": "overview.md" },
+    { "id": "security", "title": "C# Security", "path": "security.md" },
+    { "id": "performance", "title": "C# Performance", "path": "performance.md" },
+    { "id": "testing", "title": "C# Testing", "path": "testing.md" },
+    { "id": "production", "title": "C# Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["*.csproj", "*.sln", "Directory.Build.props", "global.json"],
+    "test_patterns": ["*Tests.cs", "*.Tests/"],
+    "lockfiles": ["packages.lock.json"]
+  },
+  "quality_gates": ["dotnet-version-strategy", "dependency-management", "automated-tests", "static-analysis", "security-review", "production-runtime-plan"],
+  "limitations": ["ASP.NET, Unity, MAUI, and desktop-specific guidance should live in framework packs."]
+}

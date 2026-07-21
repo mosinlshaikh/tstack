@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-dart",
+  "title": "Dart Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "dart",
+  "audience": ["Flutter engineers", "mobile engineers", "frontend engineers", "technical leads"],
+  "summary": "Foundational Dart guidance for Flutter and Dart applications, testing, security, performance, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "Dart Overview", "path": "overview.md" },
+    { "id": "security", "title": "Dart Security", "path": "security.md" },
+    { "id": "performance", "title": "Dart Performance", "path": "performance.md" },
+    { "id": "testing", "title": "Dart Testing", "path": "testing.md" },
+    { "id": "production", "title": "Dart Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["pubspec.yaml"],
+    "test_patterns": ["test/", "*_test.dart"],
+    "lockfiles": ["pubspec.lock"]
+  },
+  "quality_gates": ["sdk-constraint", "pubspec-lock-for-applications", "automated-tests", "static-analysis", "security-review", "production-release-plan"],
+  "limitations": ["Flutter-specific, platform-channel, and store-release guidance should live in framework packs."]
+}

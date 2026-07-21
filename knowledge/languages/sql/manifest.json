@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-sql",
+  "title": "SQL Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "sql",
+  "audience": ["backend engineers", "data engineers", "DBAs", "technical leads"],
+  "summary": "Foundational SQL guidance for schema design, query safety, testing, performance, security, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "SQL Overview", "path": "overview.md" },
+    { "id": "security", "title": "SQL Security", "path": "security.md" },
+    { "id": "performance", "title": "SQL Performance", "path": "performance.md" },
+    { "id": "testing", "title": "SQL Testing", "path": "testing.md" },
+    { "id": "production", "title": "SQL Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["*.sql", "migrations/", "schema.sql"],
+    "test_patterns": ["tests/", "*_test.sql"],
+    "lockfiles": []
+  },
+  "quality_gates": ["migration-strategy", "parameterized-queries", "index-review", "backup-rollback-plan", "access-control-review", "production-change-plan"],
+  "limitations": ["Database-specific behavior belongs in PostgreSQL, MySQL, SQLite, SQL Server, or other database packs."]
+}

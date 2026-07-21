@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-php",
+  "title": "PHP Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "php",
+  "audience": ["backend engineers", "web engineers", "security reviewers", "technical leads"],
+  "summary": "Foundational PHP guidance for web applications, Composer projects, testing, security, performance, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "PHP Overview", "path": "overview.md" },
+    { "id": "security", "title": "PHP Security", "path": "security.md" },
+    { "id": "performance", "title": "PHP Performance", "path": "performance.md" },
+    { "id": "testing", "title": "PHP Testing", "path": "testing.md" },
+    { "id": "production", "title": "PHP Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["composer.json"],
+    "test_patterns": ["tests/", "*Test.php"],
+    "lockfiles": ["composer.lock"]
+  },
+  "quality_gates": ["php-version-constraint", "composer-lock", "automated-tests", "static-analysis", "security-review", "production-runtime-plan"],
+  "limitations": ["Laravel, Symfony, WordPress, and other framework guidance should live in framework packs."]
+}

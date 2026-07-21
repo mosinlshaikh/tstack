@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-swift",
+  "title": "Swift Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "swift",
+  "audience": ["iOS engineers", "macOS engineers", "backend engineers", "technical leads"],
+  "summary": "Foundational Swift guidance for Apple platforms, services, testing, security, performance, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "Swift Overview", "path": "overview.md" },
+    { "id": "security", "title": "Swift Security", "path": "security.md" },
+    { "id": "performance", "title": "Swift Performance", "path": "performance.md" },
+    { "id": "testing", "title": "Swift Testing", "path": "testing.md" },
+    { "id": "production", "title": "Swift Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["Package.swift", "*.xcodeproj", "*.xcworkspace"],
+    "test_patterns": ["Tests/", "*Tests.swift"],
+    "lockfiles": ["Package.resolved"]
+  },
+  "quality_gates": ["platform-target-declared", "dependency-resolution", "automated-tests", "signing-or-release-plan", "security-review", "production-runtime-plan"],
+  "limitations": ["SwiftUI, UIKit, Vapor, and platform-specific guidance should live in framework packs."]
+}

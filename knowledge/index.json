@@ -162,6 +162,51 @@
       "path": "knowledge/languages/cpp/manifest.json",
       "status": "draft",
       "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-csharp",
+      "title": "C# Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/csharp/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-php",
+      "title": "PHP Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/php/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-swift",
+      "title": "Swift Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/swift/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-dart",
+      "title": "Dart Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/dart/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-sql",
+      "title": "SQL Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/sql/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
     }
   ],
   "compatibility": {
