@@ -230,7 +230,7 @@ def _handle_sandbox(args: argparse.Namespace) -> int:
     if args.sandbox_command == "run":
         policy = load_sandbox_policy(Path(args.policy))
         command = tuple(part for part in args.command if part != "--")
-        result = run_sandbox_command(policy, command, cwd=Path(args.cwd) if args.cwd else None, write=args.write, network=args.network)
+        result = run_sandbox_command(policy, command, cwd=Path(args.cwd) if args.cwd else None, write=args.write, network=args.network, request_path=Path(args.request), decision_path=Path(args.decision))
         _write_output(sandbox_result_json(result) if args.format == "json" else sandbox_result_markdown(result), args.output)
         return 0 if result.executed and result.exit_code == 0 and not result.timed_out else 20
     raise ValueError(f"unknown sandbox command: {args.sandbox_command}")
@@ -692,6 +692,8 @@ def build_parser() -> argparse.ArgumentParser:
     sandbox_item.set_defaults(handler=_handle_sandbox)
     sandbox_item = sandbox_subparsers.add_parser("run", help="Run an allowlisted command with sandbox policy checks")
     sandbox_item.add_argument("policy")
+    sandbox_item.add_argument("request")
+    sandbox_item.add_argument("decision")
     sandbox_item.add_argument("--cwd")
     sandbox_item.add_argument("--write", action="store_true")
     sandbox_item.add_argument("--network", action="store_true")

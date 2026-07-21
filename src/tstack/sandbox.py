@@ -5,8 +5,11 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import hashlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+from tstack.runtime import RUNTIME_DECISION_SCHEMA, RUNTIME_REQUEST_SCHEMA
 
 SANDBOX_POLICY_SCHEMA = "tstack-sandbox-policy/v1"
 SANDBOX_PLAN_SCHEMA = "tstack-sandbox-plan/v1"
@@ -134,10 +137,42 @@ def _redacted_env() -> dict[str, str]:
     return clean
 
 
-def run_sandbox_command(policy: SandboxPolicy, command: tuple[str, ...], *, cwd: Path | None = None, write: bool = False, network: bool = False) -> SandboxResult:
+def _hash_payload(payload: dict) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _approval_blockers(request_path: Path | None, decision_path: Path | None) -> tuple[str, ...]:
+    if request_path is None or decision_path is None:
+        return ("runtime request and decision are required for sandbox execution",)
+    try:
+        request = json.loads(request_path.expanduser().resolve().read_text(encoding="utf-8"))
+        decision = json.loads(decision_path.expanduser().resolve().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return (f"runtime approval could not be read: {exc}",)
+    blockers: list[str] = []
+    if request.get("schema") != RUNTIME_REQUEST_SCHEMA:
+        blockers.append("invalid runtime request schema")
+    if decision.get("schema") != RUNTIME_DECISION_SCHEMA:
+        blockers.append("invalid runtime decision schema")
+    if request.get("capability") != "process.run":
+        blockers.append("runtime request must use process.run capability")
+    if decision.get("request_id") != request.get("request_id"):
+        blockers.append("runtime request and decision ids do not match")
+    if decision.get("request_hash") != request.get("request_hash"):
+        blockers.append("runtime decision is not bound to request hash")
+    unsigned = {key: request[key] for key in request if key != "request_hash"}
+    if _hash_payload(unsigned) != request.get("request_hash"):
+        blockers.append("runtime request hash mismatch")
+    if decision.get("approved") is not True:
+        blockers.append("runtime decision is not approved")
+    return tuple(blockers)
+
+
+def run_sandbox_command(policy: SandboxPolicy, command: tuple[str, ...], *, cwd: Path | None = None, write: bool = False, network: bool = False, request_path: Path | None = None, decision_path: Path | None = None) -> SandboxResult:
     plan = plan_sandbox_command(policy, command, cwd=cwd, write=write, network=network)
-    if plan.blockers:
-        return SandboxResult(SANDBOX_RESULT_SCHEMA, plan.command, plan.workspace, False, None, False, "", "", plan.blockers, plan.redacted_env_markers)
+    blockers = plan.blockers + _approval_blockers(request_path, decision_path)
+    if blockers:
+        return SandboxResult(SANDBOX_RESULT_SCHEMA, plan.command, plan.workspace, False, None, False, "", "", blockers, plan.redacted_env_markers)
     try:
         completed = subprocess.run(
             list(plan.command),
