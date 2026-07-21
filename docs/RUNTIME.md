@@ -19,6 +19,7 @@ tstack task run-next
 tstack task run TASK_ID
 tstack task events --task-id TASK_ID
 tstack task cancel TASK_ID --reason "not needed"
+tstack task retry TASK_ID --reason "transient failure fixed"
 tstack worker run --workers 2
 tstack benchmark kernel --tasks 100 --workers 4 --output benchmark.json
 tstack kernel-audit verify
@@ -36,6 +37,7 @@ tstack kernel-rollback apply TASK_ID
 - Persisted task events
 - Queue transition and run-next scheduler foundation
 - Cancellation for non-terminal tasks
+- Failed or blocked task retry back to approval review
 - Timeout failure path
 - Restart recovery for stale `RUNNING` tasks with `fail` or `requeue` policy
 - Same-process bounded worker pool simulation over queued tasks
@@ -57,3 +59,5 @@ tstack kernel-rollback apply TASK_ID
 - Only `filesystem.write` is executable in this vertical slice
 - Signing is workspace-local HMAC, not asymmetric public-key approval
 - Imported approvals cannot be verified with the original key unless key custody is separately handled; the export intentionally excludes key material
+
+Retry does not bypass approval. A retried task returns to `WAITING_FOR_APPROVAL`, and queueing it again requires a valid non-expired, non-revoked approval with remaining uses.

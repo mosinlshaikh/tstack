@@ -138,6 +138,7 @@ tstack task run-next
 tstack task run TASK_ID
 tstack task events --task-id TASK_ID
 tstack task cancel TASK_ID --reason "not needed"
+tstack task retry TASK_ID --reason "transient failure fixed"
 tstack worker run --workers 2
 tstack benchmark kernel --tasks 100 --workers 4 --output benchmark.json
 tstack kernel-audit verify

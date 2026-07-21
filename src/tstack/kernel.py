@@ -502,13 +502,51 @@ def cancel_task(root_path: Path, task_id: str, *, reason: str = "cancelled by us
     return get_task(root, task_id)
 
 
+def retry_task(root_path: Path, task_id: str, *, reason: str = "retry requested") -> KernelTask:
+    root = root_path.expanduser().resolve()
+    task = get_task(root, task_id)
+    if task.state not in {"FAILED", "BLOCKED"}:
+        raise ValueError("only failed or blocked tasks can be retried")
+    timestamp = _now()
+    with _connect(root) as db:
+        rows = db.execute("select approval_id from approvals where task_id = ?", (task_id,)).fetchall()
+        for row in rows:
+            db.execute(
+                "insert or ignore into approval_revocations(approval_id, task_id, actor, reason, timestamp_utc) values (?, ?, ?, ?, ?)",
+                (row[0], task_id, "system", "approval invalidated by retry request", timestamp),
+            )
+        _set_state(db, task_id, "WAITING_FOR_APPROVAL", reason)
+    _audit(root, task, None, "RETRY_REQUESTED", _sha(f"retry:{task_id}:{reason}"))
+    return get_task(root, task_id)
+
+
 def _verified_approval(root: Path, task: KernelTask) -> SignedApproval:
     with _connect(root) as db:
         row = db.execute(
-            "select approval_id, task_id, request_hash, actor, mode, expires_at, max_uses, nonce, timestamp_utc, signature, uses from approvals where task_id = ? order by timestamp_utc desc limit 1",
+            """
+            select approvals.approval_id, approvals.task_id, request_hash, approvals.actor, mode, expires_at, max_uses, nonce, approvals.timestamp_utc, signature, uses
+            from approvals
+            left join approval_revocations on approval_revocations.approval_id = approvals.approval_id
+            where approvals.task_id = ? and approval_revocations.approval_id is null
+            order by approvals.timestamp_utc desc, approvals.approval_id desc
+            limit 1
+            """,
             (task.task_id,),
         ).fetchone()
     if row is None:
+        with _connect(root) as db:
+            revoked = db.execute(
+                """
+                select 1
+                from approvals
+                join approval_revocations on approval_revocations.approval_id = approvals.approval_id
+                where approvals.task_id = ?
+                limit 1
+                """,
+                (task.task_id,),
+            ).fetchone()
+        if revoked is not None:
+            raise ValueError("approval revoked")
         raise ValueError("task has no approval")
     approval = SignedApproval(APPROVAL_SCHEMA, row[0], row[1], row[2], row[3], row[4], row[5], int(row[6]), row[7], row[8], row[9])
     unsigned = asdict(approval)
@@ -527,10 +565,6 @@ def _verified_approval(root: Path, task: KernelTask) -> SignedApproval:
             expires = expires.replace(tzinfo=timezone.utc)
         if expires <= datetime.now(timezone.utc):
             raise ValueError("approval expired")
-    with _connect(root) as db:
-        revoked = db.execute("select 1 from approval_revocations where approval_id = ?", (approval.approval_id,)).fetchone()
-    if revoked is not None:
-        raise ValueError("approval revoked")
     return approval
 
 

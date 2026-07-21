@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, benchmark_worker_run, cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace, list_events, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, benchmark_worker_run, cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace, list_events, recover_stuck_tasks, retry_task, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -210,6 +210,26 @@ def test_kernel_timeout_marks_task_failed(tmp_path) -> None:
     assert verify_audit_chain(tmp_path) is True
 
 
+def test_kernel_retry_failed_task_requires_fresh_approval(tmp_path) -> None:
+    init_workspace(tmp_path)
+    task = submit_task(tmp_path, capability="filesystem.write", target="retry.txt", content="after")
+    approve_task(tmp_path, task.task_id, actor="Mosin")
+    run_task(tmp_path, task.task_id, timeout_seconds=0)
+
+    retried = retry_task(tmp_path, task.task_id, reason="fixed transient failure")
+    assert retried.state == "WAITING_FOR_APPROVAL"
+    assert retried.approval_required is True
+    with pytest.raises(ValueError, match="revoked"):
+        enqueue_task(tmp_path, task.task_id)
+
+    approve_task(tmp_path, task.task_id, actor="Mosin", max_uses=1)
+    enqueue_task(tmp_path, task.task_id)
+    result = run_next_task(tmp_path)
+    assert result.state == "SUCCEEDED"
+    assert (tmp_path / "retry.txt").read_text(encoding="utf-8") == "after"
+    assert verify_audit_chain(tmp_path) is True
+
+
 def test_kernel_cli_vertical_slice(tmp_path, capsys) -> None:
     workspace = tmp_path / "workspace"
     assert main(["workspace", "init", str(workspace)]) == 0
@@ -340,3 +360,16 @@ def test_kernel_benchmark_cli(tmp_path, capsys) -> None:
     assert payload["logical_tasks"] == 3
     assert payload["succeeded"] == 3
     assert payload["audit_chain_valid"] is True
+
+
+def test_kernel_retry_cli(tmp_path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    init_workspace(workspace)
+    task = submit_task(workspace, capability="filesystem.write", target="retry-cli.txt", content="after")
+    approve_task(workspace, task.task_id, actor="Mosin")
+    run_task(workspace, task.task_id, timeout_seconds=0)
+    assert main(["task", "retry", task.task_id, "--workspace", str(workspace), "--reason", "try again"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-task/v1"
+    assert payload["state"] == "WAITING_FOR_APPROVAL"
+    assert payload["approval_required"] is True
