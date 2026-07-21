@@ -143,6 +143,13 @@ tstack mastery profile
 tstack mastery profile --applies-to engineering-agents --format json
 ```
 
+Maintainability Audit:
+
+```bash
+tstack maintainability audit .
+tstack maintainability audit . --format json
+```
+
 File Manager Agent:
 
 ```bash

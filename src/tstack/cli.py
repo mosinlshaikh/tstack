@@ -19,6 +19,7 @@ from tstack.environment import environment_json, environment_markdown, inspect_e
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
+from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
 from tstack.mastery import level_10_mastery_profile, mastery_json, mastery_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
@@ -215,6 +216,14 @@ def _handle_mastery(args: argparse.Namespace) -> int:
         _write_output(mastery_json(profile) if args.format == "json" else mastery_markdown(profile), args.output)
         return 0
     raise ValueError(f"unknown mastery command: {args.mastery_command}")
+
+
+def _handle_maintainability(args: argparse.Namespace) -> int:
+    if args.maintainability_command == "audit":
+        report = audit_maintainability(Path(args.path), warn_lines=args.warn_lines, hold_lines=args.hold_lines)
+        _write_output(maintainability_json(report) if args.format == "json" else maintainability_markdown(report), args.output)
+        return 0 if report.verdict == "PASS" else 17
+    raise ValueError(f"unknown maintainability command: {args.maintainability_command}")
 
 
 def _handle_file(args: argparse.Namespace) -> int:
@@ -593,6 +602,17 @@ def build_parser() -> argparse.ArgumentParser:
     mastery_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     mastery_item.add_argument("--output", "-o")
     mastery_item.set_defaults(handler=_handle_mastery)
+
+    item = subparsers.add_parser("maintainability", help="Audit module size and maintainability risks")
+    maintainability_subparsers = item.add_subparsers(dest="maintainability_command", required=True)
+    maintainability_item = maintainability_subparsers.add_parser("audit", help="Report oversized modules and test/source balance")
+    maintainability_item.add_argument("path", nargs="?", default=".")
+    maintainability_item.add_argument("--warn-lines", type=int, default=500)
+    maintainability_item.add_argument("--hold-lines", type=int, default=1200)
+    maintainability_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    maintainability_item.add_argument("--output", "-o")
+    maintainability_item.set_defaults(handler=_handle_maintainability)
+
     item = subparsers.add_parser("file", help="Run local-first file agent inventory and duplicate analysis")
     file_subparsers = item.add_subparsers(dest="file_command", required=True)
     file_item = file_subparsers.add_parser("inventory", help="Scan local files and detect duplicate content")
