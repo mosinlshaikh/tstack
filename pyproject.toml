@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ttrl-tstack"
-version = "0.4.0"
-description = "TTRL's evidence-driven software engineering workflow, audit, and safe remediation CLI"
+version = "0.5.0"
+description = "TTRL's evidence-driven software engineering workflow, audit, policy, and remediation CLI"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary until a public license is selected" }
 authors = [
   { name = "T Technology Research Lab" }
 ]
-keywords = ["software-engineering", "ai-workflows", "qa", "security", "release", "static-analysis", "project-audit", "remediation"]
+keywords = ["software-engineering", "ai-workflows", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "policy-as-code"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
