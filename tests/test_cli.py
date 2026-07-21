@@ -87,6 +87,18 @@ def test_knowledge_stats_reports_language_pack_count(capsys) -> None:
     assert "python" in payload["languages"]
 
 
+def test_knowledge_topic_prints_pack_topic(capsys) -> None:
+    assert main(["knowledge", "topic", "language-python", "security"]) == 0
+    output = capsys.readouterr().out
+    assert output.startswith("# Python Security")
+    assert "secrets" in output.lower()
+
+
+def test_knowledge_unknown_topic_fails(capsys) -> None:
+    assert main(["knowledge", "topic", "language-python", "missing"]) == 1
+    assert "unknown topic" in capsys.readouterr().err
+
+
 def test_init_creates_project_contract(tmp_path, capsys) -> None:
     assert main(["init", str(tmp_path)]) == 0
     assert (tmp_path / ".tstack" / "config.json").is_file()

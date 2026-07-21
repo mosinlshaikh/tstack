@@ -146,6 +146,16 @@ def pack_markdown(pack: KnowledgePack) -> str:
     return "\n".join(lines) + "\n"
 
 
+def read_topic(pack_id: str, topic_id: str, root: Path | None = None) -> str:
+    base = root or knowledge_root()
+    pack = get_pack(pack_id, base)
+    for topic in pack.topics:
+        if topic.id == topic_id:
+            topic_path = base.parent / pack.path
+            return (topic_path.parent / topic.path).read_text(encoding="utf-8")
+    raise KeyError(f"unknown topic for {pack_id}: {topic_id}")
+
+
 def knowledge_stats(packs: tuple[KnowledgePack, ...] | None = None) -> KnowledgeStats:
     items = packs or list_packs()
     categories: dict[str, int] = {}
