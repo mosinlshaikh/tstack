@@ -150,7 +150,7 @@ Sandbox planning:
 ```bash
 tstack sandbox init . --output sandbox-policy.json
 tstack sandbox plan sandbox-policy.json --format json --cmd python -m pytest
-tstack runtime request process.run "Run tests" --format json --output request.json
+tstack runtime request process.run "Run tests" --format json --output request.json --cmd python -c "print('ok')"
 tstack runtime decide request.json --approved --approver Mosin --reason "Reviewed." --format json --output decision.json
 tstack sandbox run sandbox-policy.json request.json decision.json --format json --cmd python -c "print('ok')"
 ```

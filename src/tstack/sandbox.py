@@ -9,7 +9,7 @@ import hashlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from tstack.runtime import RUNTIME_DECISION_SCHEMA, RUNTIME_REQUEST_SCHEMA
+from tstack.runtime import RUNTIME_DECISION_SCHEMA, RUNTIME_REQUEST_SCHEMA, RUNTIME_REQUEST_SCHEMA_V2
 
 SANDBOX_POLICY_SCHEMA = "tstack-sandbox-policy/v1"
 SANDBOX_PLAN_SCHEMA = "tstack-sandbox-plan/v1"
@@ -141,7 +141,18 @@ def _hash_payload(payload: dict) -> str:
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
-def _approval_blockers(request_path: Path | None, decision_path: Path | None) -> tuple[str, ...]:
+def _expected_action(command: tuple[str, ...], *, cwd: Path | None = None, write: bool = False, network: bool = False, timeout_seconds: int = 60) -> dict:
+    return {
+        "type": "process.run",
+        "command": list(command),
+        "cwd": str(cwd.expanduser().resolve()) if cwd else None,
+        "write": bool(write),
+        "network": bool(network),
+        "timeout_seconds": int(timeout_seconds),
+    }
+
+
+def _approval_blockers(request_path: Path | None, decision_path: Path | None, command: tuple[str, ...], *, cwd: Path | None = None, write: bool = False, network: bool = False, timeout_seconds: int = 60) -> tuple[str, ...]:
     if request_path is None or decision_path is None:
         return ("runtime request and decision are required for sandbox execution",)
     try:
@@ -150,12 +161,14 @@ def _approval_blockers(request_path: Path | None, decision_path: Path | None) ->
     except (OSError, json.JSONDecodeError) as exc:
         return (f"runtime approval could not be read: {exc}",)
     blockers: list[str] = []
-    if request.get("schema") != RUNTIME_REQUEST_SCHEMA:
+    if request.get("schema") not in {RUNTIME_REQUEST_SCHEMA, RUNTIME_REQUEST_SCHEMA_V2}:
         blockers.append("invalid runtime request schema")
     if decision.get("schema") != RUNTIME_DECISION_SCHEMA:
         blockers.append("invalid runtime decision schema")
     if request.get("capability") != "process.run":
         blockers.append("runtime request must use process.run capability")
+    if request.get("schema") != RUNTIME_REQUEST_SCHEMA_V2:
+        blockers.append("process.run approval must use action-bound runtime request v2")
     if decision.get("request_id") != request.get("request_id"):
         blockers.append("runtime request and decision ids do not match")
     if decision.get("request_hash") != request.get("request_hash"):
@@ -163,6 +176,14 @@ def _approval_blockers(request_path: Path | None, decision_path: Path | None) ->
     unsigned = {key: request[key] for key in request if key != "request_hash"}
     if _hash_payload(unsigned) != request.get("request_hash"):
         blockers.append("runtime request hash mismatch")
+    expected = _expected_action(command, cwd=cwd, write=write, network=network, timeout_seconds=timeout_seconds)
+    expected_hash = _hash_payload(expected)
+    if request.get("action") != expected:
+        blockers.append("approved action payload does not match command being executed")
+    if request.get("action_hash") != expected_hash:
+        blockers.append("approved action hash does not match command being executed")
+    if decision.get("action_hash") != request.get("action_hash"):
+        blockers.append("runtime decision is not bound to action hash")
     if decision.get("approved") is not True:
         blockers.append("runtime decision is not approved")
     return tuple(blockers)
@@ -170,7 +191,7 @@ def _approval_blockers(request_path: Path | None, decision_path: Path | None) ->
 
 def run_sandbox_command(policy: SandboxPolicy, command: tuple[str, ...], *, cwd: Path | None = None, write: bool = False, network: bool = False, request_path: Path | None = None, decision_path: Path | None = None) -> SandboxResult:
     plan = plan_sandbox_command(policy, command, cwd=cwd, write=write, network=network)
-    blockers = plan.blockers + _approval_blockers(request_path, decision_path)
+    blockers = plan.blockers + _approval_blockers(request_path, decision_path, command, cwd=cwd, write=write, network=network, timeout_seconds=plan.timeout_seconds)
     if blockers:
         return SandboxResult(SANDBOX_RESULT_SCHEMA, plan.command, plan.workspace, False, None, False, "", "", blockers, plan.redacted_env_markers)
     try:

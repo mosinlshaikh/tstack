@@ -1,11 +1,11 @@
 # Sandbox Kernel
 
-TStack sandbox support currently creates safe subprocess plans. It does not execute commands yet.
+TStack sandbox support creates safe subprocess plans and can run approved allowlisted commands.
 
 ```bash
 tstack sandbox init . --output sandbox-policy.json
 tstack sandbox plan sandbox-policy.json --format json --cmd python -m pytest
-tstack runtime request process.run "Run tests" --format json --output request.json
+tstack runtime request process.run "Run tests" --format json --output request.json --cmd python -c "print('ok')"
 tstack runtime decide request.json --approved --approver Mosin --reason "Reviewed." --format json --output decision.json
 tstack sandbox run sandbox-policy.json request.json decision.json --format json --cmd python -c "print('ok')"
 ```
@@ -22,6 +22,8 @@ The sandbox plan enforces:
 
 ## Boundary
 
-The `run` command requires an approved `process.run` runtime request. It uses a direct subprocess call with `shell=False`, a bounded timeout, redacted sensitive environment variables, and the configured workspace as the working directory.
+The `run` command requires an approved `process.run` runtime request. Process approvals are action-bound: the request must include the exact command, working directory intent, write flag, network flag, and timeout. Execution is blocked if the approved action payload does not match the command being executed.
+
+It uses a direct subprocess call with `shell=False`, a bounded timeout, redacted sensitive environment variables, and the configured workspace as the working directory.
 
 This is controlled subprocess execution, not a full OS sandbox. Stronger isolation should later add containers, OS-level sandboxing, or separate worker identities while preserving this policy contract.

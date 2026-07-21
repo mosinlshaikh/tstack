@@ -29,7 +29,7 @@ from tstack.policy import baseline_json, default_policy_json, diff_json, diff_ma
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.reproducibility import compare_builds, receipt_json, repro_json, verify_attestation
-from tstack.runtime import approve_runtime_request, create_audit_event, create_runtime_request, runtime_json, runtime_markdown
+from tstack.runtime import approve_runtime_request, create_audit_event, create_process_run_request, create_runtime_request, runtime_json, runtime_markdown
 from tstack.sandbox import default_sandbox_policy, load_sandbox_policy, plan_sandbox_command, run_sandbox_command, sandbox_plan_json, sandbox_plan_markdown, sandbox_policy_json, sandbox_result_json, sandbox_result_markdown
 from tstack.scanner import report_json, report_markdown, scan_project
 from tstack.ssh import create_ssh_policy, load_ssh_policy, plan_ssh_command, ssh_plan_json, ssh_plan_markdown
@@ -208,7 +208,12 @@ def _handle_execute(args: argparse.Namespace) -> int:
 
 def _handle_runtime(args: argparse.Namespace) -> int:
     if args.runtime_command == "request":
-        request = create_runtime_request(args.capability, args.intent, target=args.target, request_id=args.request_id)
+        if args.capability == "process.run" and args.command:
+            request = create_process_run_request(args.intent, tuple(args.command), target=args.target, request_id=args.request_id, cwd=args.cwd, write=args.write, network=args.network, timeout_seconds=args.timeout_seconds)
+        elif args.capability == "process.run":
+            raise ValueError("process.run runtime request requires --cmd so approval binds the exact command")
+        else:
+            request = create_runtime_request(args.capability, args.intent, target=args.target, request_id=args.request_id)
         _write_output(runtime_json(request) if args.format == "json" else runtime_markdown(request), args.output)
         return 0
     if args.runtime_command == "decide":
@@ -787,8 +792,13 @@ def build_parser() -> argparse.ArgumentParser:
     runtime_item.add_argument("intent")
     runtime_item.add_argument("--target")
     runtime_item.add_argument("--request-id", default="RUNTIME-0001")
+    runtime_item.add_argument("--cwd")
+    runtime_item.add_argument("--write", action="store_true")
+    runtime_item.add_argument("--network", action="store_true")
+    runtime_item.add_argument("--timeout-seconds", type=int, default=60)
     runtime_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     runtime_item.add_argument("--output", "-o")
+    runtime_item.add_argument("--cmd", dest="command", nargs=argparse.REMAINDER)
     runtime_item.set_defaults(handler=_handle_runtime)
     runtime_item = runtime_subparsers.add_parser("decide", help="Record a human decision bound to a runtime request hash")
     runtime_item.add_argument("request")

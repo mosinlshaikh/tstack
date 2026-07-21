@@ -2,11 +2,11 @@ import json
 
 from tstack.cli import main
 from tstack.sandbox import default_sandbox_policy, plan_sandbox_command, run_sandbox_command
-from tstack.runtime import approve_runtime_request, create_runtime_request, runtime_json
+from tstack.runtime import approve_runtime_request, create_process_run_request, create_runtime_request, runtime_json
 
 
-def _process_approval(tmp_path):
-    request = create_runtime_request("process.run", "Run sandboxed command", request_id="RUNTIME-PROCESS-1")
+def _process_approval(tmp_path, command=("python", "-c", "print('ok')")):
+    request = create_process_run_request("Run sandboxed command", command, request_id="RUNTIME-PROCESS-1")
     request_path = tmp_path / "request.json"
     decision_path = tmp_path / "decision.json"
     request_path.write_text(runtime_json(request), encoding="utf-8")
@@ -64,6 +64,27 @@ def test_sandbox_run_refuses_blocked_command(tmp_path) -> None:
     assert result.executed is False
     assert result.exit_code is None
     assert result.blockers
+
+
+def test_sandbox_run_refuses_action_payload_mismatch(tmp_path) -> None:
+    policy = default_sandbox_policy(tmp_path)
+    request_path, decision_path = _process_approval(tmp_path, command=("python", "-c", "print('approved')"))
+    result = run_sandbox_command(policy, ("python", "-c", "print('different')"), request_path=request_path, decision_path=decision_path)
+    assert result.executed is False
+    assert any("approved action payload does not match" in blocker for blocker in result.blockers)
+
+
+def test_sandbox_run_refuses_generic_process_approval(tmp_path) -> None:
+    policy = default_sandbox_policy(tmp_path)
+    request = create_runtime_request("process.run", "Generic command approval", request_id="RUNTIME-GENERIC")
+    request_path = tmp_path / "request.json"
+    decision_path = tmp_path / "decision.json"
+    request_path.write_text(runtime_json(request), encoding="utf-8")
+    decision = approve_runtime_request(request_path, approved=True, approver="Mosin", reason="Generic approval")
+    decision_path.write_text(runtime_json(decision), encoding="utf-8")
+    result = run_sandbox_command(policy, ("python", "-c", "print('ok')"), request_path=request_path, decision_path=decision_path)
+    assert result.executed is False
+    assert any("action-bound runtime request v2" in blocker for blocker in result.blockers)
 
 
 def test_sandbox_cli_run_json(capsys, tmp_path) -> None:
