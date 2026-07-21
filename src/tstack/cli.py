@@ -1,5 +1,4 @@
 """Command-line interface for TStack."""
-
 from __future__ import annotations
 import argparse
 import json
@@ -12,6 +11,7 @@ from tstack.policy import baseline_json, default_policy_json, diff_json, diff_ma
 from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.scanner import report_json, report_markdown, scan_project
 from tstack.supplychain import build_manifest, checksums_text, manifest_json, sbom_json, verify_manifest
+from tstack.trustgate import evaluate_release_trust, trust_gate_json, trust_gate_markdown
 
 
 def _write_output(content: str, output: str | None) -> None:
@@ -143,6 +143,18 @@ def _handle_verify(args: argparse.Namespace) -> int:
     return 0 if result.valid else 5
 
 
+def _handle_trust_gate(args: argparse.Namespace) -> int:
+    result = evaluate_release_trust(
+        Path(args.path),
+        repository=args.repository,
+        workflow=args.workflow,
+        commit=args.commit,
+        require_attestation_receipt=args.require_attestation_receipt,
+    )
+    _write_output(trust_gate_json(result) if args.format == "json" else trust_gate_markdown(result), args.output)
+    return 0 if result.passed else 6
+
+
 def _add_scan_limits(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("path", nargs="?", default=".")
     parser.add_argument("--max-files", type=int, default=10000)
@@ -167,6 +179,7 @@ def build_parser() -> argparse.ArgumentParser:
     item = subparsers.add_parser("sbom", help="Generate CycloneDX JSON SBOM for the active environment"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_sbom)
     item = subparsers.add_parser("manifest", help="Create deterministic dual-hash release artifact manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--output", "-o"); item.add_argument("--checksums", action="store_true"); item.set_defaults(handler=_handle_manifest)
     item = subparsers.add_parser("verify", help="Verify artifacts against a release manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--manifest"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_verify)
+    item = subparsers.add_parser("trust-gate", help="Evaluate complete release integrity and provenance prerequisites"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--commit", required=True); item.add_argument("--require-attestation-receipt", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_trust_gate)
 
     for workflow in WORKFLOWS:
         item = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_workflow, workflow=workflow)
