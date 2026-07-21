@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from tstack.policy import evaluate_policy, load_policy
-from tstack.reproducible import compare_artifacts
+from tstack.reproducibility import compare_builds
 from tstack.scanner import scan_project
 from tstack.supplychain import verify_manifest
 from tstack.trustgate import evaluate_release_trust
@@ -43,10 +43,9 @@ def evaluate_release(
     rebuilt_root = rebuilt_dir.expanduser().resolve()
 
     scan = scan_project(project_root)
-    policy = load_policy(project_root)
-    policy_result = evaluate_policy(scan, policy)
+    policy_result = evaluate_policy(scan, load_policy(project_root))
     manifest_result = verify_manifest(release_root)
-    reproducible = compare_artifacts(release_root, rebuilt_root)
+    reproducible = compare_builds(release_root, rebuilt_root)
     trust = evaluate_release_trust(
         release_root,
         repository=repository,
@@ -54,11 +53,12 @@ def evaluate_release(
         commit=commit,
         require_attestation_receipt=require_attestation_receipt,
     )
+    repro_mismatches = sum(1 for item in reproducible.records if not item.reproducible)
 
     stages = (
         ReleaseStage("project-policy", policy_result.passed, f"active={len(policy_result.active_findings)} suppressed={len(policy_result.suppressed_findings)}"),
         ReleaseStage("artifact-integrity", manifest_result.valid, f"checked={manifest_result.checked} missing={len(manifest_result.missing)} mismatched={len(manifest_result.mismatched)}"),
-        ReleaseStage("reproducible-build", reproducible.passed, f"checked={reproducible.checked} mismatched={len(reproducible.mismatched)}"),
+        ReleaseStage("reproducible-build", reproducible.passed, f"checked={reproducible.checked} mismatched={repro_mismatches} missing_original={len(reproducible.missing_original)} missing_rebuilt={len(reproducible.missing_rebuilt)}"),
         ReleaseStage("release-trust", trust.passed, trust.verdict),
     )
     passed = all(stage.passed for stage in stages)
