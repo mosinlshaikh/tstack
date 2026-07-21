@@ -6,6 +6,8 @@ It currently supports:
 
 ```bash
 tstack workspace init .
+tstack daemon start
+tstack daemon status
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
 tstack task queue TASK_ID
@@ -20,6 +22,7 @@ tstack kernel-rollback apply TASK_ID
 ## What Works
 
 - SQLite workspace state at `.tstack/state.db`
+- Local daemon status foundation from SQLite state
 - Workspace-local approval signing key at `.tstack/approval.key`
 - Deterministic task IDs
 - Task persistence
@@ -36,7 +39,7 @@ tstack kernel-rollback apply TASK_ID
 
 ## Current Limits
 
-- No daemon process yet
+- No background daemon process yet
 - No worker pool yet
 - No restart/resume worker recovery yet
 - Only `filesystem.write` is executable in this vertical slice

@@ -99,6 +99,20 @@ class KernelEvent:
     timestamp_utc: str
 
 
+@dataclass(frozen=True)
+class KernelDaemonStatus:
+    schema: str
+    workspace: str
+    database_exists: bool
+    background_process_running: bool
+    mode: str
+    task_counts: dict[str, int]
+    queued_tasks: int
+    audit_chain_valid: bool
+    health: str
+    limitations: tuple[str, ...]
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -309,6 +323,46 @@ def list_events(root_path: Path, task_id: str | None = None) -> tuple[KernelEven
     with _connect(root) as db:
         rows = db.execute(query, params).fetchall()
     return tuple(KernelEvent("tstack-kernel-event/v1", row[0], row[1], row[2], row[3], row[4], row[5]) for row in rows)
+
+
+def daemon_status(root_path: Path) -> KernelDaemonStatus:
+    root = root_path.expanduser().resolve()
+    database = _db_path(root)
+    if not database.exists():
+        return KernelDaemonStatus(
+            "tstack-kernel-daemon-status/v1",
+            str(root),
+            False,
+            False,
+            "not-initialized",
+            {},
+            0,
+            False,
+            "NOT_INITIALIZED",
+            ("run `tstack workspace init` or `tstack daemon start` first", "background daemon process is not implemented"),
+        )
+    with _connect(root) as db:
+        rows = db.execute("select state, count(*) from tasks group by state order by state").fetchall()
+    counts = {row[0]: int(row[1]) for row in rows}
+    audit_valid = verify_audit_chain(root)
+    health = "HEALTHY" if audit_valid else "DEGRADED"
+    return KernelDaemonStatus(
+        "tstack-kernel-daemon-status/v1",
+        str(root),
+        True,
+        False,
+        "sqlite-local-control",
+        counts,
+        counts.get("QUEUED", 0),
+        audit_valid,
+        health,
+        ("no background daemon process yet", "no worker pool yet", "status is read from SQLite workspace state"),
+    )
+
+
+def start_daemon_foundation(root_path: Path) -> KernelDaemonStatus:
+    init_workspace(root_path)
+    return daemon_status(root_path)
 
 
 def enqueue_task(root_path: Path, task_id: str) -> KernelTask:

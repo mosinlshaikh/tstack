@@ -3,7 +3,7 @@ import json
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, cancel_task, enqueue_task, get_task, init_workspace, list_events, rollback_task, run_next_task, run_task, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, get_task, init_workspace, list_events, rollback_task, run_next_task, run_task, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -70,6 +70,23 @@ def test_kernel_cancels_waiting_task(tmp_path) -> None:
         run_task(tmp_path, task.task_id)
 
 
+def test_daemon_status_reports_queue_and_audit_health(tmp_path) -> None:
+    initial = daemon_status(tmp_path)
+    assert initial.health == "NOT_INITIALIZED"
+    assert initial.background_process_running is False
+    started = start_daemon_foundation(tmp_path)
+    assert started.database_exists is True
+    assert started.health == "HEALTHY"
+    task = submit_task(tmp_path, capability="filesystem.write", target="queued.txt", content="queued")
+    approve_task(tmp_path, task.task_id, actor="Mosin")
+    enqueue_task(tmp_path, task.task_id)
+    status = daemon_status(tmp_path)
+    assert status.task_counts["QUEUED"] == 1
+    assert status.queued_tasks == 1
+    assert status.audit_chain_valid is True
+    assert status.background_process_running is False
+
+
 def test_kernel_timeout_marks_task_failed(tmp_path) -> None:
     init_workspace(tmp_path)
     task = submit_task(tmp_path, capability="filesystem.write", target="note.txt", content="after")
@@ -132,3 +149,16 @@ def test_kernel_cli_queue_events_and_cancel(tmp_path, capsys) -> None:
     assert main(["task", "cancel", second["task_id"], "--workspace", str(workspace), "--reason", "not needed"]) == 0
     cancelled = json.loads(capsys.readouterr().out)
     assert cancelled["state"] == "CANCELLED"
+
+
+def test_daemon_cli_start_and_status(tmp_path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    assert main(["daemon", "start", "--workspace", str(workspace)]) == 0
+    started = json.loads(capsys.readouterr().out)
+    assert started["schema"] == "tstack-kernel-daemon-status/v1"
+    assert started["background_process_running"] is False
+    assert started["health"] == "HEALTHY"
+    assert main(["daemon", "status", "--workspace", str(workspace)]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["database_exists"] is True
+    assert status["audit_chain_valid"] is True

@@ -123,6 +123,8 @@ SQLite Runtime Vertical Slice:
 
 ```bash
 tstack workspace init .
+tstack daemon start
+tstack daemon status
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
 tstack task queue TASK_ID
