@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-javascript",
+  "title": "JavaScript Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "javascript",
+  "audience": ["frontend engineers", "backend engineers", "full-stack engineers", "technical leads"],
+  "summary": "Foundational JavaScript guidance for browser, Node.js, testing, security, performance, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "JavaScript Overview", "path": "overview.md" },
+    { "id": "security", "title": "JavaScript Security", "path": "security.md" },
+    { "id": "performance", "title": "JavaScript Performance", "path": "performance.md" },
+    { "id": "testing", "title": "JavaScript Testing", "path": "testing.md" },
+    { "id": "production", "title": "JavaScript Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["package.json"],
+    "test_patterns": ["*.test.js", "*.spec.js", "tests/"],
+    "lockfiles": ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb"]
+  },
+  "quality_gates": ["dependency-lockfile", "automated-tests", "lint-or-static-analysis", "runtime-validation", "security-review", "production-build-plan"],
+  "limitations": ["Framework-specific guidance belongs in Node.js, React, Next.js, Express, or other framework packs."]
+}

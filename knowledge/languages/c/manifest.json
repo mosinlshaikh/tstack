@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-c",
+  "title": "C Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "c",
+  "audience": ["systems engineers", "embedded engineers", "security reviewers", "technical leads"],
+  "summary": "Foundational C guidance for systems work, memory safety, testing, performance, security, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "C Overview", "path": "overview.md" },
+    { "id": "security", "title": "C Security", "path": "security.md" },
+    { "id": "performance", "title": "C Performance", "path": "performance.md" },
+    { "id": "testing", "title": "C Testing", "path": "testing.md" },
+    { "id": "production", "title": "C Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["Makefile", "CMakeLists.txt", "meson.build", "configure.ac"],
+    "test_patterns": ["tests/", "*_test.c", "test_*.c"],
+    "lockfiles": []
+  },
+  "quality_gates": ["compiler-flags", "automated-tests", "static-analysis", "sanitizer-plan", "memory-safety-review", "production-build-plan"],
+  "limitations": ["C projects vary widely by platform; embedded and OS-specific guidance should live in domain packs."]
+}

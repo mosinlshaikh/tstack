@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-cpp",
+  "title": "C++ Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "cpp",
+  "audience": ["systems engineers", "performance engineers", "security reviewers", "technical leads"],
+  "summary": "Foundational C++ guidance for systems design, memory safety, testing, performance, security, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "C++ Overview", "path": "overview.md" },
+    { "id": "security", "title": "C++ Security", "path": "security.md" },
+    { "id": "performance", "title": "C++ Performance", "path": "performance.md" },
+    { "id": "testing", "title": "C++ Testing", "path": "testing.md" },
+    { "id": "production", "title": "C++ Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["CMakeLists.txt", "conanfile.txt", "conanfile.py", "vcpkg.json", "meson.build"],
+    "test_patterns": ["tests/", "*_test.cpp", "test_*.cpp"],
+    "lockfiles": ["conan.lock", "vcpkg-configuration.json"]
+  },
+  "quality_gates": ["cpp-standard-declared", "dependency-management", "automated-tests", "static-analysis", "sanitizer-plan", "production-build-plan"],
+  "limitations": ["C++ guidance depends heavily on standard version, ABI, compiler, and target platform."]
+}

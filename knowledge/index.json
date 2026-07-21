@@ -135,6 +135,33 @@
       "path": "knowledge/languages/typescript/manifest.json",
       "status": "draft",
       "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-javascript",
+      "title": "JavaScript Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/javascript/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-c",
+      "title": "C Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/c/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-cpp",
+      "title": "C++ Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/cpp/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
     }
   ],
   "compatibility": {
