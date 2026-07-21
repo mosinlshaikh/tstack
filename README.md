@@ -125,6 +125,7 @@ TStack includes a local-first Creation OS blueprint for image-to-GLB, Blender au
 ```bash
 tstack creation blueprint
 tstack creation blueprint --format json
+tstack creation plan image-to-glb "Create low-poly GLB from character image"
 ```
 
 File Manager Agent:

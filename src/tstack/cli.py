@@ -12,7 +12,7 @@ from tstack.automation import get_capability, list_capabilities, registry_json, 
 from tstack.bug import bug_report_json, bug_report_markdown, find_bugs
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
-from tstack.creation import creation_blueprint_json, creation_blueprint_markdown
+from tstack.creation import create_plan, creation_blueprint_json, creation_blueprint_markdown, creation_plan_json, creation_plan_markdown
 from tstack.desktop import desktop_blueprint_json, desktop_blueprint_markdown
 from tstack.executor import apply_execution, execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, execution_result_json, execution_result_markdown, plan_execution
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
@@ -191,6 +191,10 @@ def _handle_desktop(args: argparse.Namespace) -> int:
 def _handle_creation(args: argparse.Namespace) -> int:
     if args.creation_command == "blueprint":
         _write_output(creation_blueprint_json() if args.format == "json" else creation_blueprint_markdown(), args.output)
+        return 0
+    if args.creation_command == "plan":
+        plan = create_plan(args.project_type, args.goal)
+        _write_output(creation_plan_json(plan) if args.format == "json" else creation_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown creation command: {args.creation_command}")
 
@@ -548,6 +552,12 @@ def build_parser() -> argparse.ArgumentParser:
     item = subparsers.add_parser("creation", help="Inspect local-first Creation OS blueprint")
     creation_subparsers = item.add_subparsers(dest="creation_command", required=True)
     creation_item = creation_subparsers.add_parser("blueprint", help="Show 3D, game, web, and mobile creation architecture")
+    creation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    creation_item.add_argument("--output", "-o")
+    creation_item.set_defaults(handler=_handle_creation)
+    creation_item = creation_subparsers.add_parser("plan", help="Create a project-specific Creation OS plan")
+    creation_item.add_argument("project_type")
+    creation_item.add_argument("goal")
     creation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     creation_item.add_argument("--output", "-o")
     creation_item.set_defaults(handler=_handle_creation)

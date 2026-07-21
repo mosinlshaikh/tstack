@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 
 
 CREATION_BLUEPRINT_SCHEMA = "tstack-creation-blueprint/v1"
+CREATION_PLAN_SCHEMA = "tstack-creation-plan/v1"
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,28 @@ class CreationPlugin:
     permissions: tuple[str, ...]
     approval_required: bool
     external_api_required: bool = False
+
+
+@dataclass(frozen=True)
+class CreationStage:
+    id: str
+    name: str
+    objective: str
+    tools: tuple[str, ...]
+    outputs: tuple[str, ...]
+    approval_required: bool = True
+    execution_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class CreationPlan:
+    schema: str
+    project_type: str
+    goal: str
+    stages: tuple[CreationStage, ...]
+    validation: tuple[str, ...]
+    approval_required: bool = True
+    execution_allowed: bool = False
 
 
 PIPELINES: tuple[CreationPipeline, ...] = (
@@ -141,4 +164,80 @@ def creation_blueprint_markdown() -> str:
         lines.append(f"- `{plugin.id}` - {plugin.name}: {', '.join(plugin.permissions)}")
     lines.extend(["", "## Hard Rules", ""])
     lines.extend(f"- {item}" for item in payload["hard_rules"])
+    return "\n".join(lines) + "\n"
+
+
+def create_plan(project_type: str, goal: str) -> CreationPlan:
+    kind = project_type.strip().lower()
+    text = goal.strip()
+    if not kind:
+        raise ValueError("project type is required")
+    if not text:
+        raise ValueError("creation goal is required")
+
+    base = [
+        CreationStage("CREATE-001", "Discussion", "Clarify requirements, target users, platform, style, constraints, and acceptance criteria.", ("orchestrator-agent", "product-agent"), ("requirements brief", "acceptance criteria")),
+        CreationStage("CREATE-002", "Plan", "Create architecture, toolchain, folder structure, task graph, risks, and approval gates.", ("architect-agent", "security-agent"), ("creation plan", "risk register")),
+    ]
+    specific: list[CreationStage]
+    validation: list[str]
+    if kind in {"image-to-glb", "3d-character"}:
+        specific = [
+            CreationStage("CREATE-003", "3D Asset Pipeline", "Analyze image, segment subject, estimate depth, generate mesh, clean topology, UV, texture, and export.", ("blender-bridge", "local-ai-bridge", "ffmpeg-bridge"), ("mesh plan", "texture plan", "GLB export plan")),
+            CreationStage("CREATE-004", "3D Validation", "Validate polygon count, texture quality, estimated geometry, mobile optimization, and GLB structure.", ("blender-bridge",), ("validation report", "confidence report")),
+        ]
+        validation = ("front geometry confidence", "side/back estimation warning", "GLB validation", "mobile optimization check")
+    elif kind in {"2d-game", "3d-game"}:
+        specific = [
+            CreationStage("CREATE-003", "Game Design", "Create game design document, mechanics, scenes, levels, controls, UI, audio, and save-system plan.", ("godot-bridge", "blender-bridge", "asset-library"), ("GDD", "scene plan", "asset plan")),
+            CreationStage("CREATE-004", "Game Build and Test", "Plan local Godot project, scripts, tests, profiling, and platform builds.", ("godot-bridge", "android-bridge"), ("playable build plan", "test plan", "export plan")),
+        ]
+        validation = ("play test", "scene load test", "performance profile", "platform export validation")
+    elif kind == "android-app":
+        specific = [
+            CreationStage("CREATE-003", "Android Build Plan", "Plan Kotlin/Compose or framework project, Gradle setup, UI, APIs, tests, lint, APK/AAB outputs.", ("android-bridge",), ("Android project plan", "test plan", "signing plan")),
+            CreationStage("CREATE-004", "Android Validation", "Plan emulator/device install, screenshots, performance, crash checks, lint, and bundle validation.", ("android-bridge",), ("APK validation", "AAB validation", "device test report")),
+        ]
+        validation = ("gradle test", "gradle lint", "assembleDebug", "bundleRelease approval")
+    elif kind == "ios-app":
+        specific = [
+            CreationStage("CREATE-003", "iOS Project Plan", "Plan Swift/SwiftUI project, tests, static checks, and Mac build-node handoff.", ("xcode-mac-bridge",), ("iOS project plan", "Mac build node plan")),
+            CreationStage("CREATE-004", "iOS Validation", "Plan xcodebuild, simulator, signing, archive, and store package verification on Mac.", ("xcode-mac-bridge",), ("simulator report", "archive plan")),
+        ]
+        validation = ("Mac + Xcode required", "xcodebuild test", "simctl validation", "signing approval")
+    else:
+        specific = [
+            CreationStage("CREATE-003", "Implementation Plan", "Plan project files, UI/UX, backend, database, tests, security, and local preview.", ("website-builder-agent", "developer-agent", "browser-bridge"), ("implementation plan", "preview plan")),
+            CreationStage("CREATE-004", "Release Plan", "Plan tests, security checks, deployment package, release notes, and rollback.", ("docker-bridge", "deployment-bridge"), ("release plan", "rollback plan")),
+        ]
+        validation = ("tests", "security scan", "local preview", "deployment approval")
+
+    final = [
+        CreationStage("CREATE-005", "Local Preview", "Prepare local preview or artifact review for human approval.", ("browser-bridge", "desktop-control-agent"), ("preview checklist", "approval packet")),
+        CreationStage("CREATE-006", "Deployment Package", "Prepare store-ready files, release notes, deployment plan, and rollback package.", ("deployment-bridge", "github-bridge"), ("deployment package", "release notes", "rollback package")),
+    ]
+    return CreationPlan(CREATION_PLAN_SCHEMA, kind, text, tuple(base + specific + final), tuple(validation))
+
+
+def creation_plan_json(plan: CreationPlan) -> str:
+    return json.dumps(asdict(plan), indent=2, sort_keys=True) + "\n"
+
+
+def creation_plan_markdown(plan: CreationPlan) -> str:
+    lines = [
+        "# TStack Creation Plan",
+        "",
+        f"- Project type: `{plan.project_type}`",
+        f"- Goal: {plan.goal}",
+        f"- Stages: {len(plan.stages)}",
+        f"- Approval required: {'yes' if plan.approval_required else 'no'}",
+        f"- Execution allowed: {'yes' if plan.execution_allowed else 'no'}",
+        "",
+        "## Stages",
+        "",
+    ]
+    for stage in plan.stages:
+        lines.extend([f"### {stage.id} - {stage.name}", "", stage.objective, "", f"- Tools: {', '.join(stage.tools)}", f"- Outputs: {', '.join(stage.outputs)}", ""])
+    lines.extend(["## Validation", ""])
+    lines.extend(f"- {item}" for item in plan.validation)
     return "\n".join(lines) + "\n"

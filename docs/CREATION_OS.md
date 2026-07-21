@@ -20,6 +20,8 @@ It is not only an AI assistant. It is designed to coordinate:
 ```bash
 tstack creation blueprint
 tstack creation blueprint --format json
+tstack creation plan image-to-glb "Create low-poly GLB from character image"
+tstack creation plan android-app "Build medical store app" --format json
 ```
 
 ## Key Rules
