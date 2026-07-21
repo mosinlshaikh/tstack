@@ -102,6 +102,12 @@ tstack approval decide approval.json --approved --approver Mosin --reason "Revie
 tstack approval readiness approval.json decision.json
 ```
 
+Controlled execution planning:
+
+```bash
+tstack execute plan approval.json decision.json
+```
+
 ## Human Language Understanding
 
 TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions. The current human-language registry tracks 100+ major languages and can be expanded over time.

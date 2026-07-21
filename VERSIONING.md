@@ -74,6 +74,7 @@ Current contract:
 - `12`: knowledge validation failure.
 - `13`: SSH automation plan blocked by policy.
 - `14`: automation registry validation failure.
+- `15`: execution plan is blocked by approval, risk, or executor policy.
 
 ## Schema Versioning
 

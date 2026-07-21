@@ -11,7 +11,8 @@ from tstack.approval import approval_decision_json, approval_decision_markdown, 
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
-from tstack.human_language import HumanExecutionPlan, execution_plan_json, execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
+from tstack.executor import execution_plan_json as executor_plan_json, execution_plan_markdown as executor_plan_markdown, plan_execution
+from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
@@ -162,6 +163,14 @@ def _handle_approval(args: argparse.Namespace) -> int:
     raise ValueError(f"unknown approval command: {args.approval_command}")
 
 
+def _handle_execute(args: argparse.Namespace) -> int:
+    if args.execute_command == "plan":
+        plan = plan_execution(Path(args.request), Path(args.decision), target=Path(args.target) if args.target else None, apply=args.apply)
+        _write_output(executor_plan_json(plan) if args.format == "json" else executor_plan_markdown(plan), args.output)
+        return 0 if plan.executable else 15
+    raise ValueError(f"unknown execute command: {args.execute_command}")
+
+
 def _handle_human(args: argparse.Namespace) -> int:
     if args.human_command == "languages":
         _write_output(human_languages_json() if args.format == "json" else human_languages_markdown(), args.output)
@@ -205,7 +214,7 @@ def _handle_human(args: argparse.Namespace) -> int:
                 "A future approval engine may execute selected low-risk steps after explicit approval.",
             ),
         )
-        _write_output(execution_plan_json(plan) if args.format == "json" else execution_plan_markdown(plan), args.output)
+        _write_output(human_execution_plan_json(plan) if args.format == "json" else human_execution_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown human command: {args.human_command}")
 
@@ -476,6 +485,16 @@ def build_parser() -> argparse.ArgumentParser:
     approval_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     approval_item.add_argument("--output", "-o")
     approval_item.set_defaults(handler=_handle_approval)
+    item = subparsers.add_parser("execute", help="Plan controlled execution for approved low-risk actions")
+    execute_subparsers = item.add_subparsers(dest="execute_command", required=True)
+    execute_item = execute_subparsers.add_parser("plan", help="Create a dry-run execution plan from approval files")
+    execute_item.add_argument("request")
+    execute_item.add_argument("decision")
+    execute_item.add_argument("--target")
+    execute_item.add_argument("--apply", action="store_true")
+    execute_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    execute_item.add_argument("--output", "-o")
+    execute_item.set_defaults(handler=_handle_execute)
     item = subparsers.add_parser("human", help="Parse human language and typo-tolerant user intent")
     human_subparsers = item.add_subparsers(dest="human_command", required=True)
     human_item = human_subparsers.add_parser("languages", help="List supported human language registry")
