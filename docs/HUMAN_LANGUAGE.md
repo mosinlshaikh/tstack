@@ -19,6 +19,12 @@ Parse a typo-tolerant instruction:
 tstack human intent "scrap se deploment tak sabkuch handel karo aur ui ux desing bhi"
 ```
 
+Route a human instruction into a safe plan:
+
+```bash
+tstack human run "scrap se deployment tak app banao aur ui ux design bhi"
+```
+
 ## Safety Boundary
 
 The parser can suggest a command, but it does not execute it automatically.
@@ -26,6 +32,7 @@ The parser can suggest a command, but it does not execute it automatically.
 - Typo normalization is allowed.
 - Hinglish and mixed-language instructions are supported.
 - Suggested commands remain approval-gated.
+- Human run mode routes into plans only.
 - Private scraping, SSH, code changes, and deployment are not executed from parsed text alone.
 
 This makes TStack more natural to use without weakening the human approval model.

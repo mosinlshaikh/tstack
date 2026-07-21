@@ -36,3 +36,14 @@ def test_human_intent_cli_json(capsys) -> None:
     assert payload["detected_language"] == "hinglish"
     assert payload["execution_allowed"] is False
     assert payload["approval_required"] is True
+
+
+def test_human_run_routes_agent_plan_without_execution(capsys) -> None:
+    assert main(["human", "run", "scrap se deployment tak app banao aur ui ux design bhi", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-human-execution-plan/v1"
+    assert payload["route"] == "agent.plan"
+    assert payload["execution_allowed"] is False
+    assert payload["approval_required"] is True
+    assert payload["plan"]["schema"] == "tstack-agent-plan/v1"
+    assert any(phase["name"] == "Advanced UI/UX Design" for phase in payload["plan"]["phases"])

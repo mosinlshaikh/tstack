@@ -91,6 +91,18 @@ class HumanIntent:
     notes: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class HumanExecutionPlan:
+    schema: str
+    intent: HumanIntent
+    routed: bool
+    route: str
+    execution_allowed: bool
+    approval_required: bool
+    plan: dict | None
+    notes: tuple[str, ...]
+
+
 def list_human_languages() -> tuple[dict[str, str], ...]:
     return tuple({"id": item[0], "name": item[1]} for item in LANGUAGES)
 
@@ -192,3 +204,33 @@ def intent_markdown(intent: HumanIntent) -> str:
             *[f"- {note}" for note in intent.notes],
         ]
     ) + "\n"
+
+
+def execution_plan_json(plan: HumanExecutionPlan) -> str:
+    return json.dumps(asdict(plan), indent=2, sort_keys=True) + "\n"
+
+
+def execution_plan_markdown(plan: HumanExecutionPlan) -> str:
+    lines = [
+        "# TStack Human Execution Plan",
+        "",
+        f"- Intent: `{plan.intent.intent}`",
+        f"- Route: `{plan.route}`",
+        f"- Routed: {'yes' if plan.routed else 'no'}",
+        f"- Approval required: {'yes' if plan.approval_required else 'no'}",
+        f"- Execution allowed: {'yes' if plan.execution_allowed else 'no'}",
+        f"- Suggested command: `{plan.intent.suggested_command}`",
+        "",
+        "## Normalized Request",
+        "",
+        plan.intent.normalized_text,
+        "",
+    ]
+    if plan.plan and "phases" in plan.plan:
+        lines.extend(["## Routed Plan", "", f"- Schema: `{plan.plan.get('schema')}`", f"- Phases: {len(plan.plan.get('phases', []))}", ""])
+        for phase in plan.plan.get("phases", []):
+            lines.append(f"- `{phase['id']}` {phase['name']}")
+        lines.append("")
+    lines.extend(["## Notes", ""])
+    lines.extend(f"- {note}" for note in plan.notes)
+    return "\n".join(lines) + "\n"

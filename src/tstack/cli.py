@@ -10,7 +10,7 @@ from tstack.agentic import agent_plan_json, agent_plan_markdown, build_agent_pla
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
-from tstack.human_language import human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
+from tstack.human_language import HumanExecutionPlan, execution_plan_json, execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
@@ -128,6 +128,43 @@ def _handle_human(args: argparse.Namespace) -> int:
     if args.human_command == "intent":
         parsed = parse_intent(args.text)
         _write_output(intent_json(parsed) if args.format == "json" else intent_markdown(parsed), args.output)
+        return 0
+    if args.human_command == "run":
+        parsed = parse_intent(args.text)
+        routed_plan = None
+        routed = False
+        route = "clarify"
+        if parsed.intent == "agent_plan":
+            routed = True
+            route = "agent.plan"
+            routed_plan = json.loads(agent_plan_json(build_agent_plan(parsed.text)))
+        elif parsed.intent == "knowledge_search":
+            routed = True
+            route = "knowledge.search"
+        elif parsed.intent == "scan":
+            routed = True
+            route = "scan"
+        elif parsed.intent == "fix_plan":
+            routed = True
+            route = "fix.plan"
+        elif parsed.intent == "ssh_plan":
+            routed = True
+            route = "ssh.plan"
+        plan = HumanExecutionPlan(
+            schema="tstack-human-execution-plan/v1",
+            intent=parsed,
+            routed=routed,
+            route=route,
+            execution_allowed=False,
+            approval_required=True,
+            plan=routed_plan,
+            notes=(
+                "Human run mode routes intent into a safe plan only.",
+                "No command is executed automatically.",
+                "A future approval engine may execute selected low-risk steps after explicit approval.",
+            ),
+        )
+        _write_output(execution_plan_json(plan) if args.format == "json" else execution_plan_markdown(plan), args.output)
         return 0
     raise ValueError(f"unknown human command: {args.human_command}")
 
@@ -353,6 +390,11 @@ def build_parser() -> argparse.ArgumentParser:
     human_item.add_argument("--output", "-o")
     human_item.set_defaults(handler=_handle_human)
     human_item = human_subparsers.add_parser("intent", help="Parse typo-tolerant human instruction into a safe command suggestion")
+    human_item.add_argument("text")
+    human_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    human_item.add_argument("--output", "-o")
+    human_item.set_defaults(handler=_handle_human)
+    human_item = human_subparsers.add_parser("run", help="Parse human instruction and route it into a safe execution plan")
     human_item.add_argument("text")
     human_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     human_item.add_argument("--output", "-o")

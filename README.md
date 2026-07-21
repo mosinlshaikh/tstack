@@ -92,6 +92,7 @@ TStack can parse mixed human instructions, including Hinglish and typo-heavy inp
 ```bash
 tstack human languages
 tstack human intent "scrap se deploment tak sabkuch handel karo aur ui ux desing bhi"
+tstack human run "scrap se deployment tak app banao aur ui ux design bhi"
 ```
 
 The parser may infer intent, but execution remains approval-gated.
