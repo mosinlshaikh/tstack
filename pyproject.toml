@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ttrl-tstack"
-version = "0.12.0"
-description = "TTRL evidence-driven engineering workflows, audits, policy gates, supply-chain verification, release decisions, and Docker/Kubernetes security gates"
+version = "0.13.0"
+description = "TTRL evidence-driven engineering workflows, audits, policy gates, supply-chain verification, release decisions, platform security, and tamper-evident evidence bundles"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary until a public license is selected" }
 authors = [{ name = "T Technology Research Lab" }]
-keywords = ["software-engineering", "devsecops", "docker", "kubernetes", "container-security", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins", "sbom", "provenance", "sigstore", "supply-chain", "reproducible-builds", "release-gate"]
+keywords = ["software-engineering", "devsecops", "docker", "kubernetes", "container-security", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins", "sbom", "provenance", "sigstore", "supply-chain", "reproducible-builds", "release-gate", "merkle-tree", "evidence-bundle"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -26,6 +26,7 @@ dev = ["pytest>=8.0"]
 
 [project.scripts]
 tstack = "tstack.cli:main"
+tstack-evidence = "tstack.evidence_cli:main"
 
 [project.entry-points."tstack.rules"]
 # Third-party packages register rule plugins in this group.
