@@ -65,11 +65,86 @@
   ],
   "packs": [
     {
-      "id": "language-python",
-      "title": "Python Language Pack",
+      "id": "language-c",
+      "title": "C Language Pack",
       "version": "0.1.0",
       "category": "languages",
-      "path": "knowledge/languages/python/manifest.json",
+      "path": "knowledge/languages/c/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-cpp",
+      "title": "C++ Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/cpp/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-csharp",
+      "title": "C# Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/csharp/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-dart",
+      "title": "Dart Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/dart/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-elixir",
+      "title": "Elixir Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/elixir/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-erlang",
+      "title": "Erlang Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/erlang/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -95,11 +170,11 @@
       ]
     },
     {
-      "id": "language-rust",
-      "title": "Rust Language Pack",
+      "id": "language-haskell",
+      "title": "Haskell Language Pack",
       "version": "0.1.0",
       "category": "languages",
-      "path": "knowledge/languages/rust/manifest.json",
+      "path": "knowledge/languages/haskell/manifest.json",
       "status": "draft",
       "topics": [
         "overview",
@@ -116,25 +191,13 @@
       "category": "languages",
       "path": "knowledge/languages/java/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
-    },
-    {
-      "id": "language-kotlin",
-      "title": "Kotlin Language Pack",
-      "version": "0.1.0",
-      "category": "languages",
-      "path": "knowledge/languages/kotlin/manifest.json",
-      "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
-    },
-    {
-      "id": "language-typescript",
-      "title": "TypeScript Language Pack",
-      "version": "0.1.0",
-      "category": "languages",
-      "path": "knowledge/languages/typescript/manifest.json",
-      "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
       "id": "language-javascript",
@@ -143,34 +206,88 @@
       "category": "languages",
       "path": "knowledge/languages/javascript/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
-      "id": "language-c",
-      "title": "C Language Pack",
+      "id": "language-julia",
+      "title": "Julia Language Pack",
       "version": "0.1.0",
       "category": "languages",
-      "path": "knowledge/languages/c/manifest.json",
+      "path": "knowledge/languages/julia/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
-      "id": "language-cpp",
-      "title": "C++ Language Pack",
+      "id": "language-kotlin",
+      "title": "Kotlin Language Pack",
       "version": "0.1.0",
       "category": "languages",
-      "path": "knowledge/languages/cpp/manifest.json",
+      "path": "knowledge/languages/kotlin/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
-      "id": "language-csharp",
-      "title": "C# Language Pack",
+      "id": "language-lua",
+      "title": "Lua Language Pack",
       "version": "0.1.0",
       "category": "languages",
-      "path": "knowledge/languages/csharp/manifest.json",
+      "path": "knowledge/languages/lua/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-objective-c",
+      "title": "Objective-C Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/objective-c/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-perl",
+      "title": "Perl Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/perl/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
       "id": "language-php",
@@ -179,25 +296,103 @@
       "category": "languages",
       "path": "knowledge/languages/php/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
-      "id": "language-swift",
-      "title": "Swift Language Pack",
+      "id": "language-python",
+      "title": "Python Language Pack",
       "version": "0.1.0",
       "category": "languages",
-      "path": "knowledge/languages/swift/manifest.json",
+      "path": "knowledge/languages/python/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
-      "id": "language-dart",
-      "title": "Dart Language Pack",
+      "id": "language-r",
+      "title": "R Language Pack",
       "version": "0.1.0",
       "category": "languages",
-      "path": "knowledge/languages/dart/manifest.json",
+      "path": "knowledge/languages/r/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-ruby",
+      "title": "Ruby Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/ruby/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-rust",
+      "title": "Rust Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/rust/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-scala",
+      "title": "Scala Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/scala/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-solidity",
+      "title": "Solidity Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/solidity/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     },
     {
       "id": "language-sql",
@@ -206,7 +401,43 @@
       "category": "languages",
       "path": "knowledge/languages/sql/manifest.json",
       "status": "draft",
-      "topics": ["overview", "security", "performance", "testing", "production"]
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-swift",
+      "title": "Swift Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/swift/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
+    },
+    {
+      "id": "language-typescript",
+      "title": "TypeScript Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/typescript/manifest.json",
+      "status": "draft",
+      "topics": [
+        "overview",
+        "security",
+        "performance",
+        "testing",
+        "production"
+      ]
     }
   ],
   "compatibility": {

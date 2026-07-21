@@ -1,0 +1,65 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-elixir",
+  "title": "Elixir Language Pack",
+  "version": "0.1.0",
+  "category": "languages",
+  "language": "elixir",
+  "status": "draft",
+  "summary": "Practical engineering guidance for Elixir: fundamentals, security, performance, testing, and production readiness.",
+  "topics": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "path": "overview.md"
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "path": "security.md"
+    },
+    {
+      "id": "performance",
+      "title": "Performance",
+      "path": "performance.md"
+    },
+    {
+      "id": "testing",
+      "title": "Testing",
+      "path": "testing.md"
+    },
+    {
+      "id": "production",
+      "title": "Production",
+      "path": "production.md"
+    }
+  ],
+  "audience": [
+    "software engineers",
+    "technical leads",
+    "security reviewers",
+    "QA engineers"
+  ],
+  "signals": {
+    "project_files": [],
+    "test_patterns": [
+      "tests/",
+      "test/",
+      "spec/"
+    ],
+    "lockfiles": []
+  },
+  "quality_gates": [
+    "declared-runtime-version",
+    "dependency-lock-or-resolution-strategy",
+    "automated-tests",
+    "lint-or-static-analysis",
+    "security-review-for-input-and-secrets",
+    "production-runtime-plan"
+  ],
+  "limitations": [
+    "This pack provides curated engineering guidance, not a complete export of model knowledge.",
+    "Framework-specific details should live in dedicated framework packs.",
+    "Runtime behavior may vary across Elixir implementations, versions, and deployment targets."
+  ]
+}
