@@ -4,11 +4,11 @@ from tstack.cli import main
 from tstack.human_language import list_human_languages, parse_intent
 
 
-def test_human_language_registry_has_50_plus_languages() -> None:
+def test_human_language_registry_has_100_plus_languages() -> None:
     languages = list_human_languages()
-    assert len(languages) >= 50
+    assert len(languages) >= 100
     ids = {item["id"] for item in languages}
-    assert {"english", "hindi", "hinglish", "urdu", "arabic", "spanish"}.issubset(ids)
+    assert {"english", "hindi", "hinglish", "urdu", "arabic", "spanish", "swahili", "chinese", "quechua"}.issubset(ids)
 
 
 def test_parse_hinglish_typo_agent_intent() -> None:
@@ -26,7 +26,7 @@ def test_human_languages_cli_json(capsys) -> None:
     assert main(["human", "languages", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema"] == "tstack-human-language-registry/v1"
-    assert payload["count"] >= 50
+    assert payload["count"] >= 100
 
 
 def test_human_intent_cli_json(capsys) -> None:

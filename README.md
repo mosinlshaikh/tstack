@@ -87,7 +87,7 @@ Current mode is **plan-only**. It does not scrape private sources, edit code, ru
 
 ## Human Language Understanding
 
-TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions.
+TStack can parse mixed human instructions, including Hinglish and typo-heavy input, into safe command suggestions. The current human-language registry tracks 100+ major languages and can be expanded over time.
 
 ```bash
 tstack human languages
