@@ -8,6 +8,7 @@ from pathlib import Path
 
 from tstack import __version__
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
+from tstack.remediation import apply_remediation, remediation_json, remediation_markdown
 from tstack.scanner import report_json, report_markdown, scan_project
 
 
@@ -66,6 +67,13 @@ def _handle_scan(args: argparse.Namespace) -> int:
     return 3 if report.verdict in {"HOLD", "REVIEW"} else 0
 
 
+def _handle_fix(args: argparse.Namespace) -> int:
+    result = apply_remediation(Path(args.path), dry_run=not args.apply, force=args.force)
+    content = remediation_json(result) if args.format == "json" else remediation_markdown(result)
+    _write_output(content, args.output)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tstack", description="Run TTRL evidence-driven engineering workflows.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -92,6 +100,14 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument("--max-files", type=int, default=10000)
     scan_parser.add_argument("--max-file-bytes", type=int, default=1000000)
     scan_parser.set_defaults(handler=_handle_scan)
+
+    fix_parser = subparsers.add_parser("fix", help="Plan or apply safe missing engineering controls")
+    fix_parser.add_argument("path", nargs="?", default=".")
+    fix_parser.add_argument("--apply", action="store_true", help="Write planned files; default is dry-run")
+    fix_parser.add_argument("--force", action="store_true", help="Allow replacement of files selected by the plan")
+    fix_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    fix_parser.add_argument("--output", "-o", help="Write plan/result to a file")
+    fix_parser.set_defaults(handler=_handle_fix)
 
     for workflow in WORKFLOWS:
         workflow_parser = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow")
