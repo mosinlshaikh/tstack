@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-java",
+  "title": "Java Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "java",
+  "audience": ["backend engineers", "enterprise architects", "security reviewers", "technical leads"],
+  "summary": "Foundational Java engineering guidance for enterprise services, JVM operations, testing, security, performance, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "Java Overview", "path": "overview.md" },
+    { "id": "security", "title": "Java Security", "path": "security.md" },
+    { "id": "performance", "title": "Java Performance", "path": "performance.md" },
+    { "id": "testing", "title": "Java Testing", "path": "testing.md" },
+    { "id": "production", "title": "Java Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"],
+    "test_patterns": ["src/test/", "*Test.java", "*IT.java"],
+    "lockfiles": ["gradle.lockfile"]
+  },
+  "quality_gates": ["declared-java-version", "dependency-management", "automated-tests", "static-analysis", "security-review", "production-runtime-plan"],
+  "limitations": ["Framework-specific Java guidance belongs in framework packs such as Spring Boot or Quarkus."]
+}

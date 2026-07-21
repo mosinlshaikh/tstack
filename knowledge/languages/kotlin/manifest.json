@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-kotlin",
+  "title": "Kotlin Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "kotlin",
+  "audience": ["Android engineers", "backend engineers", "technical leads", "QA engineers"],
+  "summary": "Foundational Kotlin guidance for Android, JVM services, coroutines, testing, security, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "Kotlin Overview", "path": "overview.md" },
+    { "id": "security", "title": "Kotlin Security", "path": "security.md" },
+    { "id": "performance", "title": "Kotlin Performance", "path": "performance.md" },
+    { "id": "testing", "title": "Kotlin Testing", "path": "testing.md" },
+    { "id": "production", "title": "Kotlin Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["build.gradle.kts", "build.gradle", "settings.gradle.kts", "AndroidManifest.xml"],
+    "test_patterns": ["src/test/", "src/androidTest/", "*Test.kt"],
+    "lockfiles": ["gradle.lockfile"]
+  },
+  "quality_gates": ["declared-jvm-or-android-target", "automated-tests", "coroutine-boundary-review", "dependency-management", "security-review", "production-runtime-plan"],
+  "limitations": ["Android-specific and server-framework details should live in dedicated packs."]
+}

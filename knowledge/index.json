@@ -108,6 +108,33 @@
         "testing",
         "production"
       ]
+    },
+    {
+      "id": "language-java",
+      "title": "Java Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/java/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-kotlin",
+      "title": "Kotlin Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/kotlin/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
+    },
+    {
+      "id": "language-typescript",
+      "title": "TypeScript Language Pack",
+      "version": "0.1.0",
+      "category": "languages",
+      "path": "knowledge/languages/typescript/manifest.json",
+      "status": "draft",
+      "topics": ["overview", "security", "performance", "testing", "production"]
     }
   ],
   "compatibility": {

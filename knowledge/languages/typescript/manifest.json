@@ -1,0 +1,25 @@
+{
+  "schema": "tstack-knowledge-pack/v1",
+  "id": "language-typescript",
+  "title": "TypeScript Language Pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "category": "languages",
+  "language": "typescript",
+  "audience": ["frontend engineers", "backend engineers", "full-stack engineers", "technical leads"],
+  "summary": "Foundational TypeScript guidance for web, Node.js, typing discipline, testing, security, performance, and production readiness.",
+  "topics": [
+    { "id": "overview", "title": "TypeScript Overview", "path": "overview.md" },
+    { "id": "security", "title": "TypeScript Security", "path": "security.md" },
+    { "id": "performance", "title": "TypeScript Performance", "path": "performance.md" },
+    { "id": "testing", "title": "TypeScript Testing", "path": "testing.md" },
+    { "id": "production", "title": "TypeScript Production", "path": "production.md" }
+  ],
+  "signals": {
+    "project_files": ["package.json", "tsconfig.json"],
+    "test_patterns": ["*.test.ts", "*.spec.ts", "tests/"],
+    "lockfiles": ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb"]
+  },
+  "quality_gates": ["strict-typecheck-or-typed-contracts", "dependency-lockfile", "automated-tests", "lint-or-static-analysis", "security-review", "production-build-plan"],
+  "limitations": ["Framework-specific guidance belongs in React, Next.js, Node.js, or other framework packs."]
+}
