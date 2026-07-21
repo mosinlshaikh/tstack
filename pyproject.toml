@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ttrl-tstack"
-version = "0.2.0"
+version = "0.3.0"
 description = "TTRL's evidence-driven software engineering workflow and project audit CLI"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = { text = "Proprietary until a public license is selected" }
 authors = [
   { name = "T Technology Research Lab" }
 ]
-keywords = ["software-engineering", "ai-workflows", "project-audit", "qa", "security", "release"]
+keywords = ["software-engineering", "ai-workflows", "qa", "security", "release", "static-analysis", "project-audit"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -34,6 +34,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+tstack = ["workflows/*.md"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
