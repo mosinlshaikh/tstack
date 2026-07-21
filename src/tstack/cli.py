@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from tstack import __version__
+from tstack.agentic import agent_plan_json, agent_plan_markdown, build_agent_plan
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
@@ -109,6 +110,14 @@ def _handle_automation(args: argparse.Namespace) -> int:
         _write_output(automation_validation_json(result) if args.format == "json" else automation_validation_markdown(result), args.output)
         return 0 if result.valid else 14
     raise ValueError(f"unknown automation command: {args.automation_command}")
+
+
+def _handle_agent(args: argparse.Namespace) -> int:
+    if args.agent_command == "plan":
+        plan = build_agent_plan(args.goal, include_uiux=not args.no_uiux, include_deployment=not args.no_deployment)
+        _write_output(agent_plan_json(plan) if args.format == "json" else agent_plan_markdown(plan), args.output)
+        return 0
+    raise ValueError(f"unknown agent command: {args.agent_command}")
 
 
 def _scan(args: argparse.Namespace):
@@ -316,6 +325,15 @@ def build_parser() -> argparse.ArgumentParser:
     automation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     automation_item.add_argument("--output", "-o")
     automation_item.set_defaults(handler=_handle_automation)
+    item = subparsers.add_parser("agent", help="Plan approval-gated agentic delivery from discovery to deployment")
+    agent_subparsers = item.add_subparsers(dest="agent_command", required=True)
+    agent_item = agent_subparsers.add_parser("plan", help="Create a plan-only agentic delivery workflow")
+    agent_item.add_argument("goal")
+    agent_item.add_argument("--no-uiux", action="store_true")
+    agent_item.add_argument("--no-deployment", action="store_true")
+    agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    agent_item.add_argument("--output", "-o")
+    agent_item.set_defaults(handler=_handle_agent)
     item = subparsers.add_parser("scan", help="Audit a project and enforce policy"); _add_scan_limits(item); item.add_argument("--format", choices=("markdown", "json", "sarif"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--policy"); item.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold"); item.set_defaults(handler=_handle_scan)
     _add_platform_parser(subparsers, "platform-audit", "all", "Audit Docker and Kubernetes security controls")
     _add_platform_parser(subparsers, "docker-audit", "docker", "Audit Dockerfile security and reproducibility")

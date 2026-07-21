@@ -74,6 +74,17 @@ Current automation stance:
 - Executable Python rule plugins require trust controls.
 - Release automation verifies artifacts but does not deploy them.
 
+## Agentic Engineering OS
+
+TStack can generate approval-gated agentic delivery plans from discovery to deployment, including advanced UI/UX design.
+
+```bash
+tstack agent plan "Build a SaaS CRM with advanced UI/UX"
+tstack agent plan "Build a SaaS CRM" --format json
+```
+
+Current mode is **plan-only**. It does not scrape private sources, edit code, run SSH, or deploy without explicit future approval controls.
+
 ## SSH Planning
 
 TStack can create policy-checked SSH command plans without executing remote commands.
