@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from tstack.frameworks import FrameworkProfile, analyze_frameworks
+from tstack.plugins import PluginDescriptor, run_plugins
 
 IGNORED_DIRS = {".git", ".hg", ".svn", ".tox", ".venv", "venv", "node_modules", "dist", "build", "target", "__pycache__", ".idea", ".vscode"}
 TEXT_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".kt", ".kts", ".go", ".rs", ".php", ".rb", ".cs", ".c", ".h", ".cpp", ".hpp", ".html", ".css", ".scss", ".sql", ".sh", ".ps1", ".yml", ".yaml", ".toml", ".json", ".xml", ".md", ".txt", ".env"}
@@ -35,6 +36,7 @@ class Finding:
     path: str | None
     evidence: str
     remediation: str
+    plugin: str | None = None
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,7 @@ class ScanReport:
     bytes_scanned: int
     languages: dict[str, int]
     frameworks: tuple[FrameworkProfile, ...]
+    plugins: tuple[PluginDescriptor, ...]
     controls: dict[str, bool]
     findings: tuple[Finding, ...]
     risk_score: int
@@ -126,16 +129,16 @@ def scan_project(path: Path, *, max_files: int = 10000, max_file_bytes: int = 1_
             findings.append(Finding(rule, severity, title, None, f"Control '{key}' was not detected.", remediation))
 
     frameworks, framework_findings = analyze_frameworks(root, relative_files)
-    findings.extend(
-        Finding(item.rule_id, item.severity, item.title, item.path, item.evidence, item.remediation)
-        for item in framework_findings
-    )
+    findings.extend(Finding(item.rule_id, item.severity, item.title, item.path, item.evidence, item.remediation) for item in framework_findings)
+
+    plugin_findings, plugins = run_plugins(root, relative_files)
+    findings.extend(Finding(item.rule_id, item.severity, item.title, item.path, item.evidence, item.remediation, item.plugin) for item in plugin_findings)
 
     weights = {"low": 2, "medium": 7, "high": 15, "critical": 30}
     risk_score = min(100, sum(weights[item.severity] for item in findings))
     verdict = "HOLD" if any(item.severity == "critical" for item in findings) or risk_score >= 60 else "REVIEW" if risk_score >= 20 else "PASS"
-    findings.sort(key=lambda item: ({"critical": 0, "high": 1, "medium": 2, "low": 3}[item.severity], item.rule_id, item.path or ""))
-    return ScanReport(str(root), digest.hexdigest(), files_scanned, bytes_scanned, dict(languages.most_common()), frameworks, controls, tuple(findings), risk_score, verdict)
+    findings.sort(key=lambda item: ({"critical": 0, "high": 1, "medium": 2, "low": 3}[item.severity], item.rule_id, item.path or "", item.plugin or ""))
+    return ScanReport(str(root), digest.hexdigest(), files_scanned, bytes_scanned, dict(languages.most_common()), frameworks, plugins, controls, tuple(findings), risk_score, verdict)
 
 
 def report_json(report: ScanReport) -> str:
@@ -146,10 +149,9 @@ def report_markdown(report: ScanReport) -> str:
     lines = ["# TStack Project Audit", "", f"- **Root:** `{report.root}`", f"- **Fingerprint:** `{report.fingerprint}`", f"- **Files scanned:** {report.files_scanned}", f"- **Bytes scanned:** {report.bytes_scanned}", f"- **Risk score:** {report.risk_score}/100", f"- **Verdict:** **{report.verdict}**", "", "## Languages", ""]
     lines.extend([f"- {name}: {count} files" for name, count in report.languages.items()] or ["- No recognized source languages detected."])
     lines.extend(["", "## Frameworks", ""])
-    if report.frameworks:
-        lines.extend(f"- **{profile.name}** — {profile.checks_run} checks; evidence: {', '.join(profile.evidence) or 'source files'}" for profile in report.frameworks)
-    else:
-        lines.append("- No supported framework profile detected.")
+    lines.extend([f"- **{profile.name}** — {profile.checks_run} checks; evidence: {', '.join(profile.evidence) or 'source files'}" for profile in report.frameworks] or ["- No supported framework profile detected."])
+    lines.extend(["", "## Plugins", ""])
+    lines.extend([f"- **{plugin.name}** v{plugin.version} — {plugin.rules} result(s); integrity `{plugin.integrity[:16]}…`" for plugin in report.plugins] or ["- No external or project plugins loaded."])
     lines.extend(["", "## Engineering Controls", ""])
     lines.extend(f"- {'PASS' if value else 'MISSING'} — {name.replace('_', ' ')}" for name, value in report.controls.items())
     lines.extend(["", "## Findings", ""])
@@ -157,6 +159,7 @@ def report_markdown(report: ScanReport) -> str:
         lines.append("No findings.")
     for finding in report.findings:
         location = f" — `{finding.path}`" if finding.path else ""
-        lines.extend([f"### [{finding.severity.upper()}] {finding.rule_id}: {finding.title}{location}", "", f"**Evidence:** {finding.evidence}", "", f"**Remediation:** {finding.remediation}", ""])
+        source = f" — plugin `{finding.plugin}`" if finding.plugin else ""
+        lines.extend([f"### [{finding.severity.upper()}] {finding.rule_id}: {finding.title}{location}{source}", "", f"**Evidence:** {finding.evidence}", "", f"**Remediation:** {finding.remediation}", ""])
     lines.extend(["## Decision", "", "Critical findings or a risk score of 60+ produce HOLD. Resolve findings and rerun the same deterministic scan before release.", ""])
     return "\n".join(lines)
