@@ -1,23 +1,24 @@
 # TStack
 
-**TStack** is the T Technology Research Lab evidence-driven workflow and project-audit system for planning, building, reviewing, testing, securing, and releasing software.
+**TStack** is the T Technology Research Lab workflow and project-audit system for planning, building, reviewing, testing, securing, and releasing software with evidence-driven engineering controls.
 
-## Lifecycle
+## Purpose
+
+TStack standardizes the complete software lifecycle:
 
 `Idea → Architecture → Development → Review → QA → Security → Release → Maintenance`
 
-TStack supports web applications, Android apps, Windows software, AI agents, automation systems, and quantitative or trading research projects.
+It supports web applications, Android apps, Windows software, AI agents, automation systems, and quantitative or trading research projects.
 
-## Capabilities
+## Core Workflows
 
-- Packaged engineering workflows: `architect`, `build`, `review`, `qa`, `security`, `design`, `ship`
-- Project initialization through `.tstack/`
-- Workflow contract validation
-- Deterministic project inventory and fingerprinting
-- Language and engineering-control detection
-- Secret-pattern heuristics that never print matched credentials
-- Markdown and machine-readable JSON audit reports
-- CI-compatible PASS, REVIEW, and HOLD verdicts
+- `architect` — requirements, boundaries, data flow, APIs, scalability, and trade-offs
+- `build` — implementation planning and production-grade development
+- `review` — correctness, maintainability, technical debt, and regression analysis
+- `qa` — test strategy, edge cases, acceptance checks, and release confidence
+- `security` — threat modelling, secrets, authentication, OWASP, and dependency risks
+- `design` — UI/UX, accessibility, responsive behaviour, and brand consistency
+- `ship` — versioning, changelog, deployment, rollback, and post-release verification
 
 ## Install
 
@@ -29,69 +30,54 @@ cd tstack
 python -m pip install -e ".[dev]"
 ```
 
-## Core Usage
+## CLI
 
 ```bash
 tstack --version
 tstack list
+tstack init my-project
 tstack validate
-tstack init ./my-project
 tstack architect
-tstack review --output review-workflow.md
-```
-
-## Project Audit Engine
-
-Scan a repository and print a Markdown audit:
-
-```bash
 tstack scan .
-```
-
-Generate JSON for automation:
-
-```bash
 tstack scan . --format json --output .tstack/audit.json
-```
-
-Control CI behavior:
-
-```bash
-# Non-zero only for HOLD
-tstack scan . --fail-on hold
-
-# Non-zero for REVIEW or HOLD
 tstack scan . --fail-on review
-
-# Always return zero while still producing a report
-tstack scan . --fail-on never
 ```
 
-Exit code `3` means the selected risk threshold was reached. A critical finding or risk score of 60 or higher produces `HOLD`.
+## Framework-Aware Scanner
 
-## Scanner Boundaries
+TStack v0.3.0 detects and evaluates:
 
-The scanner is deterministic and dependency-free. It excludes common generated directories, skips symlinks, caps file count and individual file size, and records a SHA-256 project fingerprint. Secret checks are heuristic indicators, not proof; all findings require verification before remediation.
+- **Python** — project configuration, dependency manifests, tests, and runtime constraints
+- **Node.js** — manifest validity, lockfile, tests, static checks, and engine constraints
+- **Android/Kotlin** — Gradle wrapper, manifest, unit and instrumentation tests, SDK configuration, and shrinker rules
+- **PHP** — Composer manifest and lockfile, tests, and PHP runtime constraints
+- **Go** — module manifest, checksum file, tests, and Go version directive
+- **Rust** — Cargo manifest and lockfile, tests, and minimum Rust version
 
-## Engineering Principles
+The scanner also checks repository-wide controls, source inventory, embedded-secret patterns, sensitive environment files, oversized source files, CI presence, license, security policy, tests, and dependency reproducibility.
 
-1. Evidence before conclusions.
-2. No data means no decision.
-3. Preserve user data and production stability.
-4. Prefer minimal, reversible changes.
-5. Security and observability are release requirements.
-6. Every release requires validation and rollback steps.
-7. Critical uncertainty produces HOLD, not fabricated confidence.
+## Audit Verdicts
+
+- `PASS` — no material findings
+- `REVIEW` — engineering gaps require review before release
+- `HOLD` — critical evidence or accumulated risk blocks release
+
+Use `--fail-on never`, `--fail-on hold`, or `--fail-on review` to control CI exit behaviour.
 
 ## Repository Structure
 
 ```text
 tstack/
-├── commands/                 # Human-readable workflow sources
+├── commands/                 # Source workflow documents
 ├── docs/                     # Architecture and operating documentation
-├── src/tstack/               # Packaged CLI, workflow, and scanner engines
-├── tests/                    # Regression and scanner contract tests
-├── .github/workflows/        # Multi-version CI validation
+├── src/tstack/               # Standalone Python package
+│   ├── workflows/            # Packaged workflow contracts
+│   ├── core.py               # Workflow loading, validation, and initialization
+│   ├── scanner.py            # Deterministic repository scanner
+│   ├── frameworks.py         # Ecosystem-aware deep checks
+│   └── cli.py                # Command-line interface
+├── tests/                    # Regression and framework fixtures
+├── .github/workflows/        # CI validation
 ├── pyproject.toml
 ├── CONTRIBUTING.md
 └── README.md
@@ -102,14 +88,23 @@ tstack/
 ```bash
 pytest
 tstack validate
-tstack scan . --format json --fail-on never
+tstack scan . --fail-on hold
 ```
 
-GitHub Actions validates supported Python versions on pushes and pull requests to `main`.
+GitHub Actions validates supported Python versions on every push and pull request to `main`.
+
+## Engineering Principles
+
+1. Evidence before conclusions.
+2. No data means no decision.
+3. Preserve user data and production stability.
+4. Prefer minimal, reversible changes.
+5. Security and observability are release requirements.
+6. Every release must have validation and rollback steps.
 
 ## Status
 
-TStack is under active development by **T Technology Research Lab**. Current release stage: **0.2.0 alpha**.
+TStack is under active development by **T Technology Research Lab**. Current release stage: **0.3.0 alpha**.
 
 ## License
 
