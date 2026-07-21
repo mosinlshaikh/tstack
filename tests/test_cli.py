@@ -56,6 +56,7 @@ def _create_healthy_project(root) -> None:
         "README.md": "# Demo\n",
         "LICENSE": "MIT\n",
         ".gitignore": ".env\n__pycache__/\n",
+        "pyproject.toml": '[project]\nname = "demo"\nversion = "1.0.0"\nrequires-python = ">=3.10"\n',
         "requirements.txt": "pytest==8.0.0\n",
         "Pipfile.lock": "{}\n",
         "SECURITY.md": "# Security\n",
@@ -77,6 +78,7 @@ def test_scan_healthy_project_passes_and_is_deterministic(tmp_path) -> None:
     assert first.risk_score == 0
     assert first.fingerprint == second.fingerprint
     assert first.languages["Python"] == 2
+    assert [profile.name for profile in first.frameworks] == ["Python"]
 
 
 def test_scan_json_report_and_output_file(tmp_path, capsys) -> None:
@@ -86,7 +88,41 @@ def test_scan_json_report_and_output_file(tmp_path, capsys) -> None:
     assert "Written:" in capsys.readouterr().out
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["verdict"] == "PASS"
-    assert payload["files_scanned"] >= 9
+    assert payload["files_scanned"] >= 10
+    assert payload["frameworks"][0]["name"] == "Python"
+
+
+def test_node_profile_detects_missing_quality_gates(tmp_path) -> None:
+    (tmp_path / "package.json").write_text('{"name":"demo","version":"1.0.0"}', encoding="utf-8")
+    report = scan_project(tmp_path)
+    rules = {item.rule_id for item in report.findings}
+    assert "Node.js" in {profile.name for profile in report.frameworks}
+    assert {"NODE002", "NODE003", "NODE004", "NODE005"}.issubset(rules)
+
+
+def test_android_profile_detects_manifest_and_test_gaps(tmp_path) -> None:
+    (tmp_path / "app" / "src" / "main" / "java").mkdir(parents=True)
+    (tmp_path / "settings.gradle.kts").write_text('rootProject.name = "Demo"\n', encoding="utf-8")
+    (tmp_path / "gradlew").write_text("#!/bin/sh\n", encoding="utf-8")
+    (tmp_path / "app" / "src" / "main" / "java" / "MainActivity.kt").write_text("class MainActivity\n", encoding="utf-8")
+    report = scan_project(tmp_path)
+    rules = {item.rule_id for item in report.findings}
+    assert "Android" in {profile.name for profile in report.frameworks}
+    assert "AND002" in rules
+    assert "AND003" in rules
+
+
+def test_go_and_rust_profiles_are_detected(tmp_path) -> None:
+    (tmp_path / "go.mod").write_text("module example.com/demo\n", encoding="utf-8")
+    (tmp_path / "main.go").write_text("package main\n", encoding="utf-8")
+    (tmp_path / "Cargo.toml").write_text('[package]\nname = "demo"\nversion = "0.1.0"\n', encoding="utf-8")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "lib.rs").write_text("pub fn demo() {}\n", encoding="utf-8")
+    report = scan_project(tmp_path)
+    profiles = {profile.name for profile in report.frameworks}
+    rules = {item.rule_id for item in report.findings}
+    assert {"Go", "Rust"}.issubset(profiles)
+    assert {"GO002", "GO003", "GO004", "RS002", "RS003", "RS004"}.issubset(rules)
 
 
 def test_scan_holds_on_embedded_secret_without_printing_secret(tmp_path, capsys) -> None:
