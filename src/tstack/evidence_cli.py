@@ -33,7 +33,8 @@ def _write(content: str, destination: str | None) -> None:
     path = Path(destination).expanduser().resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
-    print(f"Written: {path}")
+    # Keep stdout reserved for JSON so callers can parse it deterministically.
+    print(f"Written: {path}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
