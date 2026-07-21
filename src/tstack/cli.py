@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from tstack import __version__
+from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
 from tstack.policy import baseline_json, default_policy_json, diff_json, diff_markdown, diff_report, evaluate_policy, load_baseline, load_policy, report_sarif
 from tstack.release_orchestrator import evaluate_release, release_json, release_markdown
@@ -94,6 +95,27 @@ def _handle_scan(args: argparse.Namespace) -> int:
     return 3 if report.verdict in {"HOLD", "REVIEW"} else 0
 
 
+def _handle_platform_audit(args: argparse.Namespace) -> int:
+    report = audit_platform(Path(args.path))
+    if args.scope == "docker" and not report.docker_detected:
+        raise ValueError("Dockerfile not detected")
+    if args.scope == "kubernetes" and not report.kubernetes_detected:
+        raise ValueError("Kubernetes manifests not detected")
+    filtered = report
+    if args.scope != "all":
+        prefix = "DOCKER" if args.scope == "docker" else "K8S"
+        findings = tuple(item for item in report.findings if item.rule_id.startswith(prefix))
+        score = min(100, sum({"critical": 30, "high": 15, "medium": 7, "low": 2}[item.severity] for item in findings))
+        verdict = "HOLD" if any(item.severity == "critical" for item in findings) or score >= 60 else "REVIEW" if score >= 20 else "PASS"
+        filtered = type(report)(report.root, report.docker_detected, report.kubernetes_detected, report.files_checked, findings, score, verdict)
+    _write_output(platform_json(filtered) if args.format == "json" else platform_markdown(filtered), args.output)
+    if args.fail_on == "never":
+        return 0
+    if args.fail_on == "hold":
+        return 9 if filtered.verdict == "HOLD" else 0
+    return 9 if filtered.verdict in {"HOLD", "REVIEW"} else 0
+
+
 def _handle_baseline(args: argparse.Namespace) -> int:
     destination = args.output or str(Path(args.path) / ".tstack" / "baseline.json")
     _write_output(baseline_json(_scan(args)), destination)
@@ -130,8 +152,7 @@ def _handle_sbom(args: argparse.Namespace) -> int:
 def _handle_manifest(args: argparse.Namespace) -> int:
     root = Path(args.path).expanduser().resolve()
     manifest = build_manifest(root)
-    manifest_target = args.output or str(root / "manifest.json")
-    _write_output(manifest_json(manifest), manifest_target)
+    _write_output(manifest_json(manifest), args.output or str(root / "manifest.json"))
     if args.checksums:
         _write_output(checksums_text(manifest, "sha256"), str(root / "checksums.sha256"))
         _write_output(checksums_text(manifest, "sha3-256"), str(root / "checksums.sha3-256"))
@@ -153,8 +174,7 @@ def _handle_repro_verify(args: argparse.Namespace) -> int:
 
 def _handle_attestation_verify(args: argparse.Namespace) -> int:
     receipt = verify_attestation(Path(args.artifact), repository=args.repository, workflow=args.workflow, source_digest=args.source_digest, deny_self_hosted=not args.allow_self_hosted)
-    destination = args.output or str(Path(args.artifact).expanduser().resolve().parent / "attestation-verification.json")
-    _write_output(receipt_json(receipt), destination)
+    _write_output(receipt_json(receipt), args.output or str(Path(args.artifact).expanduser().resolve().parent / "attestation-verification.json"))
     return 0
 
 
@@ -176,21 +196,30 @@ def _add_scan_limits(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-file-bytes", type=int, default=1000000)
 
 
+def _add_platform_parser(subparsers, name: str, scope: str, help_text: str) -> None:
+    item = subparsers.add_parser(name, help=help_text)
+    item.add_argument("path", nargs="?", default=".")
+    item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    item.add_argument("--output", "-o")
+    item.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold")
+    item.set_defaults(handler=_handle_platform_audit, scope=scope)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tstack", description="Run TTRL evidence-driven engineering workflows.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
-
     item = subparsers.add_parser("list", help="List available workflows"); item.set_defaults(handler=_handle_list)
     item = subparsers.add_parser("init", help="Initialize TStack in a project"); item.add_argument("path", nargs="?", default="."); item.add_argument("--force", action="store_true"); item.set_defaults(handler=_handle_init)
     item = subparsers.add_parser("validate", help="Validate packaged workflow contracts"); item.add_argument("--json", action="store_true"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_validate)
-
     item = subparsers.add_parser("scan", help="Audit a project and enforce policy"); _add_scan_limits(item); item.add_argument("--format", choices=("markdown", "json", "sarif"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--policy"); item.add_argument("--fail-on", choices=("never", "hold", "review"), default="hold"); item.set_defaults(handler=_handle_scan)
+    _add_platform_parser(subparsers, "platform-audit", "all", "Audit Docker and Kubernetes security controls")
+    _add_platform_parser(subparsers, "docker-audit", "docker", "Audit Dockerfile security and reproducibility")
+    _add_platform_parser(subparsers, "k8s-audit", "kubernetes", "Audit Kubernetes workload security and resilience")
     item = subparsers.add_parser("baseline", help="Create a finding baseline"); _add_scan_limits(item); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_baseline)
     item = subparsers.add_parser("diff", help="Compare current findings with a baseline"); _add_scan_limits(item); item.add_argument("--baseline", required=True); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.add_argument("--fail-on-new", action="store_true"); item.set_defaults(handler=_handle_diff)
     item = subparsers.add_parser("policy-init", help="Create a default project policy"); item.add_argument("path", nargs="?", default="."); item.add_argument("--force", action="store_true"); item.set_defaults(handler=_handle_policy_init)
     item = subparsers.add_parser("fix", help="Plan or apply safe controls"); item.add_argument("path", nargs="?", default="."); item.add_argument("--apply", action="store_true"); item.add_argument("--force", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_fix)
-
     item = subparsers.add_parser("sbom", help="Generate CycloneDX JSON SBOM for the active environment"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_sbom)
     item = subparsers.add_parser("manifest", help="Create deterministic dual-hash release artifact manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--output", "-o"); item.add_argument("--checksums", action="store_true"); item.set_defaults(handler=_handle_manifest)
     item = subparsers.add_parser("verify", help="Verify artifacts against a release manifest"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--manifest"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_verify)
@@ -198,7 +227,6 @@ def build_parser() -> argparse.ArgumentParser:
     item = subparsers.add_parser("attestation-verify", help="Verify GitHub/Sigstore provenance and write a receipt"); item.add_argument("artifact"); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--source-digest"); item.add_argument("--allow-self-hosted", action="store_true"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_attestation_verify)
     item = subparsers.add_parser("trust-gate", help="Evaluate complete release integrity and provenance prerequisites"); item.add_argument("path", nargs="?", default="dist"); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--commit", required=True); item.add_argument("--require-attestation-receipt", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_trust_gate)
     item = subparsers.add_parser("release-check", help="Run the complete project, artifact, reproducibility, and provenance release gate"); item.add_argument("--project", default="."); item.add_argument("--release", default="dist"); item.add_argument("--rebuilt", required=True); item.add_argument("--repository", required=True); item.add_argument("--workflow", default=".github/workflows/release.yml"); item.add_argument("--commit", required=True); item.add_argument("--allow-missing-attestation", action="store_true"); item.add_argument("--format", choices=("markdown", "json"), default="markdown"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_release_check)
-
     for workflow in WORKFLOWS:
         item = subparsers.add_parser(workflow, help=f"Print the {workflow} workflow"); item.add_argument("--output", "-o"); item.set_defaults(handler=_handle_workflow, workflow=workflow)
     return parser
