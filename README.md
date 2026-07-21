@@ -64,6 +64,8 @@ TStack includes an automation capability registry so SSH, plugins, knowledge, an
 tstack automation list
 tstack automation show ssh-plan
 tstack automation validate
+tstack capability list
+tstack capability validate
 ```
 
 Current automation stance:

@@ -11,6 +11,7 @@ from tstack.approval import approval_decision_json, approval_decision_markdown, 
 from tstack.audit_log import append_audit_event, audit_log_json, audit_log_markdown, verify_audit_log
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.bug import bug_report_json, bug_report_markdown, find_bugs
+from tstack.capabilities import capability_registry_json, capability_registry_markdown, capability_validation_json, get_capability_definition, list_capability_definitions, validate_capability_registry
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
 from tstack.creation import create_plan, creation_blueprint_json, creation_blueprint_markdown, creation_plan_json, creation_plan_markdown
@@ -125,6 +126,22 @@ def _handle_automation(args: argparse.Namespace) -> int:
         _write_output(automation_validation_json(result) if args.format == "json" else automation_validation_markdown(result), args.output)
         return 0 if result.valid else 14
     raise ValueError(f"unknown automation command: {args.automation_command}")
+
+
+def _handle_capability(args: argparse.Namespace) -> int:
+    if args.capability_command == "list":
+        capabilities = list_capability_definitions(args.status)
+        _write_output(capability_registry_json(capabilities) if args.format == "json" else capability_registry_markdown(capabilities), args.output)
+        return 0
+    if args.capability_command == "show":
+        capability = get_capability_definition(args.capability_id)
+        _write_output(capability_registry_json((capability,)) if args.format == "json" else capability_registry_markdown((capability,)), args.output)
+        return 0
+    if args.capability_command == "validate":
+        errors = validate_capability_registry()
+        _write_output(capability_validation_json(errors), args.output)
+        return 0 if not errors else 25
+    raise ValueError(f"unknown capability command: {args.capability_command}")
 
 
 def _handle_agent(args: argparse.Namespace) -> int:
@@ -651,6 +668,23 @@ def build_parser() -> argparse.ArgumentParser:
     automation_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     automation_item.add_argument("--output", "-o")
     automation_item.set_defaults(handler=_handle_automation)
+
+    item = subparsers.add_parser("capability", help="Inspect public capability status and policy model")
+    capability_subparsers = item.add_subparsers(dest="capability_command", required=True)
+    capability_item = capability_subparsers.add_parser("list", help="List capability definitions")
+    capability_item.add_argument("--status", choices=("WORKING", "EXPERIMENTAL", "PLAN-ONLY", "UNSUPPORTED"))
+    capability_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    capability_item.add_argument("--output", "-o")
+    capability_item.set_defaults(handler=_handle_capability)
+    capability_item = capability_subparsers.add_parser("show", help="Show one capability definition")
+    capability_item.add_argument("capability_id")
+    capability_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    capability_item.add_argument("--output", "-o")
+    capability_item.set_defaults(handler=_handle_capability)
+    capability_item = capability_subparsers.add_parser("validate", help="Validate capability registry invariants")
+    capability_item.add_argument("--output", "-o")
+    capability_item.set_defaults(handler=_handle_capability)
+
     item = subparsers.add_parser("agent", help="Plan approval-gated agentic delivery from discovery to deployment")
     agent_subparsers = item.add_subparsers(dest="agent_command", required=True)
     agent_item = agent_subparsers.add_parser("plan", help="Create a plan-only agentic delivery workflow")

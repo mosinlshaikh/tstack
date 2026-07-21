@@ -11,6 +11,7 @@ Every public capability must be labeled honestly.
 | Agent catalog/orchestration | PLAN-ONLY | Generates plans, does not execute agent work |
 | Runtime capability request | EXPERIMENTAL | Hash-bound request/decision/audit commands |
 | Runtime kernel task vertical slice | EXPERIMENTAL | SQLite task -> signed approval -> filesystem write -> audit -> rollback |
+| Capability model registry | WORKING | `tstack capability list`, `tstack capability validate` |
 | Sandbox runner | EXPERIMENTAL | Controlled subprocess, not OS/container isolation |
 | File inventory and organize plan | WORKING | Inventory and plan commands |
 | Transactional file runtime | EXPERIMENTAL | Approved move/undo flow |
