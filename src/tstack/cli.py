@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from tstack import __version__
-from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, agent_stats, agent_stats_json, agent_stats_markdown, build_agent_plan, build_orchestration_plan, get_agent, list_agents, orchestration_json, orchestration_markdown, select_agents_for_goal
+from tstack.agentic import agent_catalog_json, agent_catalog_markdown, agent_plan_json, agent_plan_markdown, agent_selection_json, agent_selection_markdown, agent_stats, agent_stats_json, agent_stats_markdown, build_agent_plan, build_orchestration_plan, failure_route_json, failure_route_markdown, get_agent, list_agents, orchestration_json, orchestration_markdown, route_failure, select_agents_for_goal
 from tstack.automation import get_capability, list_capabilities, registry_json, registry_markdown, validate_automation, validation_json as automation_validation_json, validation_markdown as automation_validation_markdown
 from tstack.container_platform import audit_platform, platform_json, platform_markdown
 from tstack.core import WORKFLOWS, initialize_project, load_workflow, validate_all, validation_report_json
@@ -137,6 +137,10 @@ def _handle_agent(args: argparse.Namespace) -> int:
     if args.agent_command == "stats":
         stats = agent_stats()
         _write_output(agent_stats_json(stats) if args.format == "json" else agent_stats_markdown(stats), args.output)
+        return 0
+    if args.agent_command == "route-failure":
+        route = route_failure(args.description, failure_type=args.type)
+        _write_output(failure_route_json(route) if args.format == "json" else failure_route_markdown(route), args.output)
         return 0
     raise ValueError(f"unknown agent command: {args.agent_command}")
 
@@ -414,6 +418,12 @@ def build_parser() -> argparse.ArgumentParser:
     agent_item.add_argument("--output", "-o")
     agent_item.set_defaults(handler=_handle_agent)
     agent_item = agent_subparsers.add_parser("stats", help="Show specialized agent category and safety counts")
+    agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    agent_item.add_argument("--output", "-o")
+    agent_item.set_defaults(handler=_handle_agent)
+    agent_item = agent_subparsers.add_parser("route-failure", help="Route a test, CI, security, performance, or UI failure to the right agent")
+    agent_item.add_argument("description")
+    agent_item.add_argument("--type", choices=("auto", "test", "security", "performance", "devops", "uiux", "general"), default="auto")
     agent_item.add_argument("--format", choices=("markdown", "json"), default="markdown")
     agent_item.add_argument("--output", "-o")
     agent_item.set_defaults(handler=_handle_agent)

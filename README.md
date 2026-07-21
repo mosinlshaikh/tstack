@@ -86,6 +86,7 @@ tstack agent stats
 tstack agent show ui-ux-agent
 tstack agent select "Medical Store Management System website with admin panel and deployment"
 tstack agent orchestrate "Medical Store Management System website with admin panel and deployment"
+tstack agent route-failure "pytest failed in test_cli"
 ```
 
 Current mode is **plan-only**. It does not scrape private sources, edit code, run SSH, or deploy without explicit future approval controls.

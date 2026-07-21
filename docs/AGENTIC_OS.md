@@ -23,6 +23,7 @@ tstack agent catalog --category engineering
 tstack agent show ui-ux-agent
 tstack agent select "Medical Store Management System website with admin panel and deployment"
 tstack agent orchestrate "Medical Store Management System website with admin panel and deployment"
+tstack agent route-failure "pytest failed in test_cli"
 ```
 
 JSON output:
@@ -80,6 +81,18 @@ Agent orchestration maps selected agents into delivery phases:
 - Governance and Approval
 
 This is the first step toward multi-agent collaboration while preserving explicit approval boundaries.
+
+## Failure Routing
+
+When a test, CI, security, performance, or UI failure appears, TStack can route it to the correct primary agent while keeping execution blocked.
+
+Examples:
+
+```bash
+tstack agent route-failure "pytest failed in test_cli"
+tstack agent route-failure "secret scanning found exposed token"
+tstack agent route-failure "GitHub Actions deployment failed" --format json
+```
 
 ## Safety Model
 

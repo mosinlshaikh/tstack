@@ -84,6 +84,20 @@ class AgentStats:
     execution_allowed: int
 
 
+@dataclass(frozen=True)
+class FailureRoute:
+    schema: str
+    failure_type: str
+    description: str
+    primary_agent: str
+    supporting_agents: tuple[str, ...]
+    escalation_agent: str
+    recommended_command: str
+    approval_required: bool = True
+    execution_allowed: bool = False
+    rationale: tuple[str, ...] = ()
+
+
 AGENT_CATALOG: tuple[AgentDefinition, ...] = (
     AgentDefinition("architect-agent", "Architect Agent", "engineering", ("system architecture", "API boundaries", "data modeling", "technical tradeoffs"), ("read-repo", "write-plan")),
     AgentDefinition("developer-agent", "Developer Agent", "engineering", ("implementation planning", "code generation proposals", "refactoring plans", "bug fix plans"), ("read-repo", "write-plan")),
@@ -361,6 +375,74 @@ def agent_stats_markdown(stats: AgentStats) -> str:
         "",
     ]
     lines.extend(f"- `{category}`: {count}" for category, count in stats.categories.items())
+    return "\n".join(lines) + "\n"
+
+
+def route_failure(description: str, *, failure_type: str = "auto") -> FailureRoute:
+    text = description.strip()
+    if not text:
+        raise ValueError("failure description is required")
+    lowered = text.lower()
+    detected = failure_type
+    if failure_type == "auto":
+        if any(term in lowered for term in ("security", "secret", "vulnerability", "cve", "auth", "xss", "sql injection")):
+            detected = "security"
+        elif any(term in lowered for term in ("performance", "slow", "latency", "timeout", "memory", "cpu")):
+            detected = "performance"
+        elif any(term in lowered for term in ("deploy", "docker", "kubernetes", "ci", "build", "pipeline", "workflow")):
+            detected = "devops"
+        elif any(term in lowered for term in ("ui", "ux", "visual", "layout", "accessibility", "responsive")):
+            detected = "uiux"
+        elif any(term in lowered for term in ("test", "pytest", "assert", "unit", "integration", "regression")):
+            detected = "test"
+        else:
+            detected = "general"
+
+    routes = {
+        "test": ("qa-agent", ("developer-agent", "documentation-agent"), "orchestrator-agent", "tstack agent orchestrate \"Fix failing tests\""),
+        "security": ("security-agent", ("developer-agent", "qa-agent", "policy-agent"), "orchestrator-agent", "tstack scan ."),
+        "performance": ("performance-agent", ("developer-agent", "qa-agent", "monitoring-agent"), "orchestrator-agent", "tstack agent orchestrate \"Investigate performance failure\""),
+        "devops": ("devops-agent", ("deployment-agent", "release-agent", "operations-agent"), "orchestrator-agent", "tstack agent orchestrate \"Fix CI or deployment failure\""),
+        "uiux": ("ui-ux-agent", ("frontend-agent", "accessibility-agent", "qa-agent"), "orchestrator-agent", "tstack agent orchestrate \"Fix UI/UX failure\""),
+        "general": ("developer-agent", ("qa-agent", "architect-agent"), "orchestrator-agent", "tstack agent orchestrate \"Investigate software failure\""),
+    }
+    primary, supporting, escalation, command = routes.get(detected, routes["general"])
+    return FailureRoute(
+        schema="tstack-failure-route/v1",
+        failure_type=detected,
+        description=text,
+        primary_agent=primary,
+        supporting_agents=supporting,
+        escalation_agent=escalation,
+        recommended_command=command,
+        rationale=(
+            f"Failure was classified as {detected}.",
+            f"Primary owner is {primary}.",
+            "Orchestrator remains final routing and human handoff owner.",
+        ),
+    )
+
+
+def failure_route_json(route: FailureRoute) -> str:
+    return json.dumps(asdict(route), indent=2, sort_keys=True) + "\n"
+
+
+def failure_route_markdown(route: FailureRoute) -> str:
+    lines = [
+        "# TStack Failure Route",
+        "",
+        f"- Failure type: `{route.failure_type}`",
+        f"- Primary agent: `{route.primary_agent}`",
+        f"- Supporting agents: {', '.join(route.supporting_agents)}",
+        f"- Escalation agent: `{route.escalation_agent}`",
+        f"- Recommended command: `{route.recommended_command}`",
+        f"- Approval required: {'yes' if route.approval_required else 'no'}",
+        f"- Execution allowed: {'yes' if route.execution_allowed else 'no'}",
+        "",
+        "## Rationale",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in route.rationale)
     return "\n".join(lines) + "\n"
 
 
