@@ -20,6 +20,7 @@ tstack task run TASK_ID
 tstack task events --task-id TASK_ID
 tstack task cancel TASK_ID --reason "not needed"
 tstack worker run --workers 2
+tstack benchmark kernel --tasks 100 --workers 4 --output benchmark.json
 tstack kernel-audit verify
 tstack kernel-rollback apply TASK_ID
 ```
@@ -38,6 +39,7 @@ tstack kernel-rollback apply TASK_ID
 - Timeout failure path
 - Restart recovery for stale `RUNNING` tasks with `fail` or `requeue` policy
 - Same-process bounded worker pool simulation over queued tasks
+- Machine-readable local kernel benchmark
 - Signed approval records
 - Approval replay prevention through `max_uses`
 - Approval expiry enforcement

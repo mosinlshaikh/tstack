@@ -8,6 +8,7 @@ import json
 import secrets
 import shutil
 import sqlite3
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,6 +156,21 @@ class KernelStateBundle:
     tables: dict[str, list[dict]]
     approval_key_exported: bool
     audit_chain_valid: bool
+
+
+@dataclass(frozen=True)
+class KernelBenchmarkResult:
+    schema: str
+    workspace: str
+    logical_tasks: int
+    requested_workers: int
+    duration_seconds: float
+    tasks_attempted: int
+    succeeded: int
+    failed: int
+    throughput_tasks_per_second: float
+    audit_chain_valid: bool
+    limitations: tuple[str, ...]
 
 
 def _now() -> str:
@@ -668,6 +684,38 @@ def export_workspace_state(root_path: Path) -> KernelStateBundle:
             rows = db.execute(f"select * from {table}").fetchall()
             tables[table] = [dict(row) for row in rows]
     return KernelStateBundle("tstack-kernel-state-bundle/v1", str(root), _now(), tables, False, verify_audit_chain(root))
+
+
+def benchmark_worker_run(root_path: Path, *, tasks: int = 100, workers: int = 4) -> KernelBenchmarkResult:
+    if tasks <= 0 or tasks > 10_000:
+        raise ValueError("benchmark tasks must be between 1 and 10000")
+    root = root_path.expanduser().resolve()
+    init_workspace(root)
+    for index in range(tasks):
+        task = submit_task(root, capability="filesystem.write", target=f"bench/task-{index}.txt", content=f"task {index}")
+        approve_task(root, task.task_id, actor="benchmark", max_uses=1)
+        enqueue_task(root, task.task_id)
+    start = time.perf_counter()
+    run = run_worker_pool(root, workers=workers, limit=tasks)
+    duration = round(time.perf_counter() - start, 6)
+    throughput = round(run.succeeded / duration, 4) if duration > 0 else float(run.succeeded)
+    return KernelBenchmarkResult(
+        "tstack-kernel-benchmark/v1",
+        str(root),
+        tasks,
+        workers,
+        duration,
+        run.tasks_attempted,
+        run.succeeded,
+        run.failed,
+        throughput,
+        verify_audit_chain(root),
+        (
+            "same-process benchmark only",
+            "does not prove 1000-agent support",
+            "filesystem and sqlite performance depend on host machine",
+        ),
+    )
 
 
 def import_workspace_state(root_path: Path, bundle_path: Path) -> KernelWorkspace:

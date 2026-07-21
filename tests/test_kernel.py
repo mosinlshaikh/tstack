@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace, list_events, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, benchmark_worker_run, cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace, list_events, recover_stuck_tasks, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -186,6 +186,19 @@ def test_workspace_state_export_import_without_key_material(tmp_path) -> None:
     assert verify_audit_chain(target) is True
 
 
+def test_kernel_benchmark_reports_real_counts(tmp_path) -> None:
+    result = benchmark_worker_run(tmp_path, tasks=5, workers=2)
+    assert result.schema == "tstack-kernel-benchmark/v1"
+    assert result.logical_tasks == 5
+    assert result.requested_workers == 2
+    assert result.tasks_attempted == 5
+    assert result.succeeded == 5
+    assert result.failed == 0
+    assert result.duration_seconds >= 0
+    assert result.audit_chain_valid is True
+    assert "does not prove 1000-agent support" in result.limitations
+
+
 def test_kernel_timeout_marks_task_failed(tmp_path) -> None:
     init_workspace(tmp_path)
     task = submit_task(tmp_path, capability="filesystem.write", target="note.txt", content="after")
@@ -317,3 +330,13 @@ def test_workspace_cli_export_import(tmp_path, capsys) -> None:
     assert main(["workspace", "import", str(bundle), "--workspace", str(target)]) == 0
     capsys.readouterr()
     assert get_task(target, task["task_id"]).state == "WAITING_FOR_APPROVAL"
+
+
+def test_kernel_benchmark_cli(tmp_path, capsys) -> None:
+    workspace = tmp_path / "bench"
+    assert main(["benchmark", "kernel", "--workspace", str(workspace), "--tasks", "3", "--workers", "2"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-kernel-benchmark/v1"
+    assert payload["logical_tasks"] == 3
+    assert payload["succeeded"] == 3
+    assert payload["audit_chain_valid"] is True

@@ -10,6 +10,7 @@
 - Added public capability model registry with honest status labels.
 - Added signed approval expiry validation and approval revocation.
 - Added workspace state export/import without approval key material.
+- Added machine-readable local kernel benchmark.
 - Added signed task approvals using workspace-local HMAC keys.
 - Added task persistence, approved filesystem write execution, snapshots, audit-chain records, and rollback.
 - Added controlled sandbox runner bound to runtime approval.
