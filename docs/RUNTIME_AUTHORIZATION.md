@@ -14,6 +14,10 @@ TStack runtime authorization must approve the exact action that will execute, no
 - Runtime v1 approvals are single-use only.
 - SQLite stores requests and approvals transactionally.
 - Atomic consumption prevents the same approval from authorizing two executions.
+- Signed sandbox and file-plan bindings reject modified payloads.
+- Durable execution journal entries are fsynced before and after actions.
+- Completed receipts receive a SHA-256 result digest.
+- Journal hash chaining detects modification, deletion, or reordering.
 
 ## Required verification order
 
@@ -27,11 +31,11 @@ request schema
 → expiry
 → Ed25519 signature
 → SQLite single-use consumption
+→ durable started journal event
 → execution
-→ automatic audit append
+→ completed/failed journal event
+→ result hash verification
 ```
-
-The current branch implements request creation, signature verification, persistence, and single-use consumption. Existing sandbox and file executors are **not yet migrated** to this v1 authorization contract; they must not be described as fully protected by signed approvals until that integration is complete.
 
 ## Key storage boundary
 
@@ -43,11 +47,18 @@ The current branch implements request creation, signature verification, persiste
 
 Private keys must never be committed, written to audit output, or included in approval JSON.
 
-## Next integration slice
+## Current secure execution APIs
 
-1. Bind `sandbox run` to `ActionRequest.parameters` containing executable, arguments, working directory, timeout, network, write scope, and permitted environment keys.
-2. Bind file transactions to an immutable plan hash and source metadata.
-3. Verify the signature immediately before execution.
-4. Consume approval atomically before the first side effect.
-5. Append execution and rollback events automatically to the audit chain.
-6. Add crash-safe transaction journals and recovery.
+- `execute_signed_sandbox()` binds command, arguments, working directory, timeout, write scope, and network intent.
+- `execute_signed_file_plan()` binds the complete organize plan, root, and dry-run state.
+- `execute_with_journal()` requires durable started/completed/failed events around a secure operation.
+- `verify_execution_journal()` validates journal order and hash-chain integrity.
+
+## Remaining boundaries
+
+1. Existing legacy CLI execution paths still require migration to the signed contract.
+2. The current subprocess runner is controlled execution, not full OS/container isolation.
+3. Network and write restrictions must distinguish declared policy from OS-enforced isolation.
+4. File transactions still need a persistent per-move recovery journal for process-crash recovery.
+5. Production signing keys still require OS credential-vault adapters.
+6. Cross-process concurrency and full Python-version CI must pass before merge.
