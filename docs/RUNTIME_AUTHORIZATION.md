@@ -1,8 +1,8 @@
 # Runtime Authorization Integrity
 
-Status: **experimental foundation**
+Status: **experimental secure execution foundation**
 
-TStack runtime authorization must approve the exact action that will execute, not only a generic capability name.
+TStack runtime authorization approves the exact action that will execute, not only a generic capability name.
 
 ## Guarantees introduced in `0.18.0a1`
 
@@ -14,12 +14,22 @@ TStack runtime authorization must approve the exact action that will execute, no
 - Runtime v1 approvals are single-use only.
 - SQLite stores requests and approvals transactionally.
 - Atomic consumption prevents the same approval from authorizing two executions.
-- Signed sandbox and file-plan bindings reject modified payloads.
-- Durable execution journal entries are fsynced before and after actions.
-- Completed receipts receive a SHA-256 result digest.
-- Journal hash chaining detects modification, deletion, or reordering.
+- Sandbox execution is bound to command, cwd, timeout, write, and network parameters.
+- File execution is bound to the complete organize plan, resolved root, and dry-run/apply mode.
+- Durable execution journals record lifecycle state and result hashes.
+- `tstack-secure` exposes the signed execution path without pretending legacy commands are equivalent.
 
-## Required verification order
+## Secure CLI
+
+```text
+tstack-secure sandbox-run POLICY REQUEST APPROVAL PUBLIC_KEY RUNTIME_DB --cmd python -m pytest
+tstack-secure file-run PLAN REQUEST APPROVAL PUBLIC_KEY RUNTIME_DB
+tstack-secure file-run PLAN REQUEST APPROVAL PUBLIC_KEY RUNTIME_DB --apply --manifest transaction.json
+```
+
+The public key file may contain 32 raw Ed25519 bytes or base64-encoded raw bytes. Private signing keys must remain in an operating-system credential vault.
+
+## Verification order
 
 ```text
 request schema
@@ -31,34 +41,16 @@ request schema
 → expiry
 → Ed25519 signature
 → SQLite single-use consumption
-→ durable started journal event
 → execution
-→ completed/failed journal event
-→ result hash verification
+→ durable execution journal
 ```
 
-## Key storage boundary
+## Security boundaries
 
-`generate_signing_keypair()` exists for tests and bootstrap tooling. Production private keys must be stored through an operating-system credential vault:
-
-- Windows Credential Manager
-- macOS Keychain
-- Linux Secret Service
-
-Private keys must never be committed, written to audit output, or included in approval JSON.
-
-## Current secure execution APIs
-
-- `execute_signed_sandbox()` binds command, arguments, working directory, timeout, write scope, and network intent.
-- `execute_signed_file_plan()` binds the complete organize plan, root, and dry-run state.
-- `execute_with_journal()` requires durable started/completed/failed events around a secure operation.
-- `verify_execution_journal()` validates journal order and hash-chain integrity.
-
-## Remaining boundaries
-
-1. Existing legacy CLI execution paths still require migration to the signed contract.
-2. The current subprocess runner is controlled execution, not full OS/container isolation.
-3. Network and write restrictions must distinguish declared policy from OS-enforced isolation.
-4. File transactions still need a persistent per-move recovery journal for process-crash recovery.
-5. Production signing keys still require OS credential-vault adapters.
-6. Cross-process concurrency and full Python-version CI must pass before merge.
+- `tstack-secure` is the preferred execution entrypoint for Runtime Authorization v1.
+- Existing legacy CLI paths remain compatibility-only and are not equivalent to signed authorization.
+- Controlled subprocess execution is not full OS/container isolation.
+- A declared `network=false` is not an enforced network sandbox until OS/container controls exist.
+- Production key generation and storage still require OS credential-vault integration.
+- Full interrupted file-transaction recovery requires per-move durable checkpoints and recovery tooling.
+- The branch must not be promoted until the complete test matrix is green.
