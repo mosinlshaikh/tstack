@@ -1,9 +1,9 @@
 import json
-from dataclasses import asdict
 
 import pytest
 
-from tstack.runtime_auth import create_action_request, generate_signing_keypair, sign_action_request, action_json
+from tstack.file_recovery import inspect_recovery_journal
+from tstack.runtime_auth import action_json, create_action_request, generate_signing_keypair, sign_action_request
 from tstack.runtime_store import ApprovalAlreadyConsumedError, register_approval
 from tstack.sandbox import default_sandbox_policy, plan_sandbox_command
 from tstack.secure_execution import execute_signed_file_plan, execute_signed_sandbox
@@ -55,7 +55,7 @@ def test_signed_sandbox_rejects_parameter_change(tmp_path):
         execute_signed_sandbox(policy, ("python", "-c", "print('changed')"), request_path=request_path, approval_path=approval_path, public_key_raw=public, store_path=store)
 
 
-def test_signed_file_plan_moves_and_binds_plan(tmp_path):
+def test_signed_file_plan_moves_and_records_recovery_lifecycle(tmp_path):
     (tmp_path / "a.txt").write_text("hello", encoding="utf-8")
     plan = {
         "schema": "tstack-file-organize-plan/v1",
@@ -67,10 +67,24 @@ def test_signed_file_plan_moves_and_binds_plan(tmp_path):
     plan_path.write_text(json.dumps(plan), encoding="utf-8")
     parameters = {"plan": plan, "dry_run": False, "root": str(tmp_path.resolve())}
     request_path, approval_path, public, store = _signed(tmp_path, "filesystem.move", parameters)
-    receipt = execute_signed_file_plan(plan_path, request_path=request_path, approval_path=approval_path, public_key_raw=public, store_path=store, dry_run=False)
+    recovery = tmp_path / "recovery.jsonl"
+    receipt = execute_signed_file_plan(
+        plan_path,
+        request_path=request_path,
+        approval_path=approval_path,
+        public_key_raw=public,
+        store_path=store,
+        dry_run=False,
+        recovery_journal=recovery,
+    )
     assert receipt.status == "succeeded"
     assert not (tmp_path / "a.txt").exists()
     assert (tmp_path / "docs/a.txt").read_text(encoding="utf-8") == "hello"
+    report = inspect_recovery_journal(recovery)
+    assert report.valid is True
+    assert report.terminal is True
+    assert report.latest_state == "COMMITTED"
+    assert report.moved_pairs == (("a.txt", "docs/a.txt"),)
 
 
 def test_signed_file_plan_rejects_modified_plan(tmp_path):
