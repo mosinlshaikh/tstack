@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ttrl-tstack"
-version = "0.17.0"
-description = "TTRL evidence-driven engineering workflows, supply-chain verification, learning and decision brains, and an Engineering Knowledge Graph"
+version = "0.18.0a1"
+description = "TTRL evidence-driven engineering workflows, supply-chain verification, learning and decision brains, and a capability-gated runtime foundation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary until a public license is selected" }
 authors = [{ name = "T Technology Research Lab" }]
-keywords = ["software-engineering", "devsecops", "docker", "kubernetes", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins", "sbom", "provenance", "sigstore", "supply-chain", "reproducible-builds", "release-gate", "merkle-tree", "learning-engine", "decision-engine", "knowledge-graph", "impact-analysis", "explainable-ai", "human-in-the-loop"]
+keywords = ["software-engineering", "devsecops", "docker", "kubernetes", "qa", "security", "release", "static-analysis", "project-audit", "sarif", "plugins", "sbom", "provenance", "sigstore", "supply-chain", "reproducible-builds", "release-gate", "merkle-tree", "learning-engine", "decision-engine", "knowledge-graph", "impact-analysis", "capability-broker", "signed-approvals", "explainable-ai", "human-in-the-loop"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -19,7 +19,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
-dependencies = []
+dependencies = ["cryptography>=43.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
