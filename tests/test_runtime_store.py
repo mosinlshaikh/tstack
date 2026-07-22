@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -103,3 +104,27 @@ def test_expired_stored_approval_is_rejected(tmp_path) -> None:
             execution_id="EXEC-EXPIRED",
             consumed_at=issued + timedelta(seconds=2),
         )
+
+
+def test_concurrent_consumers_allow_exactly_one_winner(tmp_path) -> None:
+    database, request = _registered_approval(tmp_path)
+
+    def consume(index: int) -> str:
+        try:
+            consume_approval(
+                database,
+                request_id=request.request_id,
+                request_hash=request.request_hash,
+                parameters_hash=request.parameters_hash,
+                nonce=request.nonce,
+                execution_id=f"EXEC-CONCURRENT-{index}",
+            )
+            return "consumed"
+        except ApprovalAlreadyConsumedError:
+            return "replayed"
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(consume, range(8)))
+
+    assert results.count("consumed") == 1
+    assert results.count("replayed") == 7
