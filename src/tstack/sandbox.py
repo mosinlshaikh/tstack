@@ -18,6 +18,7 @@ SANDBOX_RESULT_SCHEMA = "tstack-sandbox-result/v1"
 DEFAULT_ALLOWED_COMMANDS = ("python", "pytest", "git", "node", "npm")
 SENSITIVE_ENV_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "KEY", "CREDENTIAL", "AUTH")
 SHELL_METACHARS = ("&&", "||", ";", "|", ">", "<", "`", "$(", "\n")
+LEGACY_UNSIGNED_OPT_IN = "TSTACK_ALLOW_LEGACY_UNSIGNED_EXECUTION"
 
 
 @dataclass(frozen=True)
@@ -170,7 +171,11 @@ def _approval_blockers(request_path: Path | None, decision_path: Path | None) ->
 
 def run_sandbox_command(policy: SandboxPolicy, command: tuple[str, ...], *, cwd: Path | None = None, write: bool = False, network: bool = False, request_path: Path | None = None, decision_path: Path | None = None) -> SandboxResult:
     plan = plan_sandbox_command(policy, command, cwd=cwd, write=write, network=network)
-    blockers = plan.blockers + _approval_blockers(request_path, decision_path)
+    legacy_enabled = os.environ.get(LEGACY_UNSIGNED_OPT_IN, "").strip() == "1"
+    compatibility_blockers = () if legacy_enabled else (
+        "legacy unsigned sandbox execution is disabled; use tstack-secure sandbox-run",
+    )
+    blockers = plan.blockers + compatibility_blockers + _approval_blockers(request_path, decision_path)
     if blockers:
         return SandboxResult(SANDBOX_RESULT_SCHEMA, plan.command, plan.workspace, False, None, False, "", "", blockers, plan.redacted_env_markers)
     try:
@@ -240,4 +245,4 @@ def sandbox_result_markdown(result: SandboxResult) -> str:
     ]
     lines.extend(f"- {item}" for item in result.blockers or ("none",))
     lines.extend(["", "## Stdout", "", "```text", result.stdout, "```", "", "## Stderr", "", "```text", result.stderr, "```", ""])
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
