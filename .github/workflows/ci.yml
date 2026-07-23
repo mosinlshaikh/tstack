@@ -50,6 +50,8 @@ jobs:
           tstackd --help
           tstackd capabilities > /tmp/capabilities.json
           test -s /tmp/capabilities.json
+          tstack-sandbox profiles > /tmp/sandbox-profiles.json
+          test -s /tmp/sandbox-profiles.json
 
       - name: Run TStack self-scan
         run: tstack scan . --fail-on review
