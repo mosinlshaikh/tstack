@@ -1,4 +1,4 @@
-from dataclasses import asdict
+import json
 
 import pytest
 
@@ -11,7 +11,7 @@ from tstack.signed_sandbox_broker import (
     execute_signed_sandbox_workflow,
     sandbox_parameters,
 )
-from tstack.task_runtime import get_task, submit_task
+from tstack.task_runtime import submit_task
 
 
 def _fixture(tmp_path):
@@ -25,9 +25,8 @@ def _fixture(tmp_path):
         artifact_paths=("result.txt",),
     )
     parameters = sandbox_parameters(sandbox)
-    task_db = tmp_path / "tasks.db"
     task = submit_task(
-        task_db,
+        tmp_path / "tasks.db",
         workspace_id=str(workspace),
         capability="docker.run",
         intent="Run approved isolated test",
@@ -88,9 +87,11 @@ def test_end_to_end_signed_broker_sandbox_workflow(tmp_path):
     assert receipt.capability == "docker.run"
     assert receipt.sandbox.status == "succeeded"
     assert receipt.broker.decision.allowed is True
-    report = verify_execution_journal(journal)
-    assert report.valid is True
-    assert [entry.state for entry in report.entries] == ["started", "completed"]
+    valid, errors = verify_execution_journal(journal)
+    assert valid is True
+    assert errors == ()
+    entries = [json.loads(line) for line in journal.read_text(encoding="utf-8").splitlines()]
+    assert [entry["state"] for entry in entries] == ["started", "completed"]
 
 
 def test_replay_is_rejected_before_second_sandbox_execution(tmp_path):
@@ -118,9 +119,8 @@ def test_replay_is_rejected_before_second_sandbox_execution(tmp_path):
 
 def test_modified_task_parameters_are_denied(tmp_path):
     task, sandbox, request_path, approval_path, public, approval_store = _fixture(tmp_path)
-    modified_db = tmp_path / "modified.db"
     modified = submit_task(
-        modified_db,
+        tmp_path / "modified.db",
         workspace_id=task.workspace_id,
         capability="docker.run",
         intent=task.intent,
