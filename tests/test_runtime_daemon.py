@@ -33,7 +33,7 @@ def test_daemon_executes_queued_task_and_stops_when_idle(tmp_path) -> None:
             database=database,
             state_directory=state,
             worker_count=2,
-            poll_interval_seconds=0.02,
+            poll_interval_seconds=0.05,
             lease_seconds=3,
             heartbeat_interval_seconds=0.25,
             idle_exit_seconds=0.15,
@@ -69,7 +69,7 @@ def test_daemon_records_dispatch_failure(tmp_path) -> None:
         DaemonConfig(
             database=database,
             state_directory=state,
-            poll_interval_seconds=0.02,
+            poll_interval_seconds=0.05,
             lease_seconds=3,
             heartbeat_interval_seconds=0.25,
             idle_exit_seconds=0.15,
@@ -90,7 +90,7 @@ def test_stop_request_terminates_foreground_daemon(tmp_path) -> None:
         DaemonConfig(
             database=database,
             state_directory=state,
-            poll_interval_seconds=0.02,
+            poll_interval_seconds=0.05,
             lease_seconds=3,
             heartbeat_interval_seconds=0.25,
         ),
