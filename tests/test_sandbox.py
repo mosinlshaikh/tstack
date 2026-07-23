@@ -47,14 +47,14 @@ def test_sandbox_cli_plan_json(capsys, tmp_path) -> None:
     assert payload["blockers"] == []
 
 
-def test_sandbox_run_executes_allowlisted_command(tmp_path) -> None:
+def test_legacy_sandbox_run_is_denied_by_default(tmp_path) -> None:
     policy = default_sandbox_policy(tmp_path)
     request_path, decision_path = _process_approval(tmp_path)
     result = run_sandbox_command(policy, ("python", "-c", "print('ok')"), request_path=request_path, decision_path=decision_path)
     assert result.schema == "tstack-sandbox-result/v1"
-    assert result.executed is True
-    assert result.exit_code == 0
-    assert result.stdout.strip() == "ok"
+    assert result.executed is False
+    assert result.exit_code is None
+    assert any("legacy unsigned sandbox execution is disabled" in item for item in result.blockers)
 
 
 def test_sandbox_run_refuses_blocked_command(tmp_path) -> None:
@@ -66,13 +66,13 @@ def test_sandbox_run_refuses_blocked_command(tmp_path) -> None:
     assert result.blockers
 
 
-def test_sandbox_cli_run_json(capsys, tmp_path) -> None:
+def test_legacy_sandbox_cli_run_returns_secure_migration_code(capsys, tmp_path) -> None:
     policy_path = tmp_path / "policy.json"
     request_path, decision_path = _process_approval(tmp_path)
     assert main(["sandbox", "init", str(tmp_path), "--output", str(policy_path)]) == 0
     capsys.readouterr()
-    assert main(["sandbox", "run", str(policy_path), str(request_path), str(decision_path), "--format", "json", "--cmd", "python", "-c", "print('ok')"]) == 0
+    assert main(["sandbox", "run", str(policy_path), str(request_path), str(decision_path), "--format", "json", "--cmd", "python", "-c", "print('ok')"]) == 20
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema"] == "tstack-sandbox-result/v1"
-    assert payload["executed"] is True
-    assert payload["stdout"].strip() == "ok"
+    assert payload["executed"] is False
+    assert any("tstack-secure sandbox-run" in item for item in payload["blockers"])
