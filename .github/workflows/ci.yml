@@ -47,6 +47,7 @@ jobs:
           tstack list
           tstack architect --output /tmp/architect.md
           test -s /tmp/architect.md
+          tstackd --help
 
       - name: Run TStack self-scan
         run: tstack scan . --fail-on review
