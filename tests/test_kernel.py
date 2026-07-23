@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from tstack.cli import main
-from tstack.kernel import approve_task, benchmark_worker_run, cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace, list_events, recover_stuck_tasks, retry_task, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, benchmark_worker_run, cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace, list_events, recover_stuck_tasks, retry_task, revoke_approval, rollback_task, run_daemon, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 
 
 def test_kernel_vertical_slice_write_audit_and_rollback(tmp_path) -> None:
@@ -138,6 +138,27 @@ def test_daemon_recovery_can_requeue_stale_running_tasks(tmp_path) -> None:
     assert verify_audit_chain(tmp_path) is True
 
 
+def test_daemon_run_processes_queue_and_records_heartbeat(tmp_path) -> None:
+    init_workspace(tmp_path)
+    task = submit_task(tmp_path, capability="filesystem.write", target="daemon.txt", content="done")
+    approve_task(tmp_path, task.task_id, actor="Mosin")
+    enqueue_task(tmp_path, task.task_id)
+    result = run_daemon(tmp_path, daemon_id="DAEMON-TEST", cycles=1, interval_seconds=0, worker_limit=1)
+    assert result.schema == "tstack-kernel-daemon-run/v1"
+    assert result.daemon_id == "DAEMON-TEST"
+    assert result.status == "STOPPED"
+    assert result.cycles == 1
+    assert result.heartbeats == 1
+    assert result.processed_tasks == 1
+    assert result.succeeded == 1
+    assert result.failed == 0
+    assert result.audit_chain_valid is True
+    assert (tmp_path / "daemon.txt").read_text(encoding="utf-8") == "done"
+    status = daemon_status(tmp_path)
+    assert status.background_process_running is False
+    assert status.task_counts["SUCCEEDED"] == 1
+
+
 def test_worker_pool_processes_queued_tasks(tmp_path) -> None:
     init_workspace(tmp_path)
     for index in range(3):
@@ -175,10 +196,12 @@ def test_workspace_state_export_import_without_key_material(tmp_path) -> None:
     approve_task(source, task.task_id, actor="Mosin")
     enqueue_task(source, task.task_id)
     run_worker_pool(source)
+    run_daemon(source, daemon_id="DAEMON-EXPORT", cycles=1, interval_seconds=0)
     bundle = export_workspace_state(source)
     assert bundle.schema == "tstack-kernel-state-bundle/v1"
     assert bundle.approval_key_exported is False
     assert "approval.key" not in json.dumps(bundle.tables)
+    assert bundle.tables["daemon_leases"][0]["daemon_id"] == "DAEMON-EXPORT"
     bundle_path = tmp_path / "bundle.json"
     bundle_path.write_text(json.dumps({"schema": bundle.schema, "workspace": bundle.workspace, "exported_at": bundle.exported_at, "tables": bundle.tables, "approval_key_exported": bundle.approval_key_exported, "audit_chain_valid": bundle.audit_chain_valid}, indent=2), encoding="utf-8")
     import_workspace_state(target, bundle_path)
@@ -319,6 +342,21 @@ def test_daemon_cli_recover(tmp_path, capsys) -> None:
     assert payload["schema"] == "tstack-kernel-recovery-result/v1"
     assert payload["recovered"] == 1
     assert get_task(workspace, task.task_id).state == "FAILED"
+
+
+def test_daemon_cli_run(tmp_path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    init_workspace(workspace)
+    task = submit_task(workspace, capability="filesystem.write", target="daemon-cli.txt", content="done")
+    approve_task(workspace, task.task_id, actor="Mosin")
+    enqueue_task(workspace, task.task_id)
+    assert main(["daemon", "run", "--workspace", str(workspace), "--daemon-id", "DAEMON-CLI", "--cycles", "1", "--interval-seconds", "0"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "tstack-kernel-daemon-run/v1"
+    assert payload["daemon_id"] == "DAEMON-CLI"
+    assert payload["processed_tasks"] == 1
+    assert payload["succeeded"] == 1
+    assert (workspace / "daemon-cli.txt").read_text(encoding="utf-8") == "done"
 
 
 def test_worker_cli_run(tmp_path, capsys) -> None:

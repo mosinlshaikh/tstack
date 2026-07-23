@@ -4,6 +4,7 @@
 
 - Added strict proprietary source-available license and donation/sponsorship documentation.
 - Added action-bound `process.run` runtime approvals for sandbox execution.
+- Added foreground runtime daemon loop with SQLite lease, heartbeat, recovery, and queue processing.
 - Added SQLite-backed runtime kernel vertical slice.
 - Added persisted task events, queue transition, run-next scheduler foundation, cancellation, and timeout failure path.
 - Added daemon start/status foundation backed by SQLite workspace health, queue counts, and audit validation.

@@ -21,7 +21,7 @@ from tstack.environment import environment_json, environment_markdown, inspect_e
 from tstack.file_agent import build_inventory, inventory_json, inventory_markdown, organize_plan_json, organize_plan_markdown, plan_organize
 from tstack.file_runtime import apply_file_transaction, file_transaction_json, file_transaction_markdown, undo_file_transaction
 from tstack.human_language import HumanExecutionPlan, execution_plan_json as human_execution_plan_json, execution_plan_markdown as human_execution_plan_markdown, human_languages_json, human_languages_markdown, intent_json, intent_markdown, parse_intent
-from tstack.kernel import approve_task, benchmark_worker_run, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, recover_stuck_tasks, retry_task, revoke_approval, rollback_task, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
+from tstack.kernel import approve_task, benchmark_worker_run, cancel_task as kernel_cancel_task, daemon_status, enqueue_task, export_workspace_state, get_task, import_workspace_state, init_workspace as kernel_init_workspace, kernel_json, list_events as kernel_list_events, list_tasks as kernel_list_tasks, recover_stuck_tasks, retry_task, revoke_approval, rollback_task, run_daemon, run_next_task, run_task, run_worker_pool, start_daemon_foundation, submit_task, verify_audit_chain
 from tstack.knowledge import get_pack, knowledge_stats, list_packs, pack_json, pack_markdown, packs_json, packs_markdown, read_topic, search_json, search_knowledge, search_markdown, stats_json, stats_markdown, validate_knowledge, validation_json, validation_markdown
 from tstack.maintainability import audit_maintainability, maintainability_json, maintainability_markdown
 from tstack.mastery import level_10_mastery_profile, mastery_json, mastery_markdown
@@ -288,6 +288,10 @@ def _handle_daemon(args: argparse.Namespace) -> int:
         result = recover_stuck_tasks(Path(args.workspace), policy=args.policy)
         _write_output(kernel_json(result), args.output)
         return 0
+    if args.daemon_command == "run":
+        result = run_daemon(Path(args.workspace), daemon_id=args.daemon_id, cycles=args.cycles, interval_seconds=args.interval_seconds, worker_limit=args.worker_limit, recovery_policy=args.recovery_policy)
+        _write_output(kernel_json(result), args.output)
+        return 0 if result.audit_chain_valid and result.failed == 0 else 24
     raise ValueError(f"unknown daemon command: {args.daemon_command}")
 
 
@@ -886,6 +890,15 @@ def build_parser() -> argparse.ArgumentParser:
     daemon_item.set_defaults(handler=_handle_daemon)
     daemon_item = daemon_subparsers.add_parser("status", help="Report local runtime state, queue, and audit health")
     daemon_item.add_argument("--workspace", default=".")
+    daemon_item.add_argument("--output", "-o")
+    daemon_item.set_defaults(handler=_handle_daemon)
+    daemon_item = daemon_subparsers.add_parser("run", help="Run the foreground runtime daemon loop")
+    daemon_item.add_argument("--workspace", default=".")
+    daemon_item.add_argument("--daemon-id")
+    daemon_item.add_argument("--cycles", type=int)
+    daemon_item.add_argument("--interval-seconds", type=float, default=1.0)
+    daemon_item.add_argument("--worker-limit", type=int, default=1)
+    daemon_item.add_argument("--recovery-policy", choices=("fail", "requeue"), default="fail")
     daemon_item.add_argument("--output", "-o")
     daemon_item.set_defaults(handler=_handle_daemon)
 

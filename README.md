@@ -130,6 +130,7 @@ tstack workspace import state-bundle.json --workspace restored-workspace
 tstack daemon start
 tstack daemon status
 tstack daemon recover --policy fail
+tstack daemon run --cycles 1 --interval-seconds 0
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
 tstack kernel-approval revoke APPROVAL_ID --actor Mosin --reason "No longer approved"

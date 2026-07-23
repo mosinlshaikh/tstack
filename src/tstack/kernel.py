@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import secrets
 import shutil
 import sqlite3
@@ -122,6 +123,23 @@ class KernelDaemonStatus:
     audit_chain_valid: bool
     health: str
     limitations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class KernelDaemonRun:
+    schema: str
+    workspace: str
+    daemon_id: str
+    pid: int
+    status: str
+    cycles: int
+    heartbeats: int
+    recovered_tasks: int
+    processed_tasks: int
+    succeeded: int
+    failed: int
+    shutdown_reason: str
+    audit_chain_valid: bool
 
 
 @dataclass(frozen=True)
@@ -307,6 +325,15 @@ def init_workspace(path: Path) -> KernelWorkspace:
               message text not null,
               created_at text not null
             );
+            create table if not exists daemon_leases (
+              daemon_id text primary key,
+              pid integer not null,
+              status text not null,
+              started_at text not null,
+              last_heartbeat text not null,
+              shutdown_at text,
+              heartbeat_count integer not null default 0
+            );
             """
         )
     return KernelWorkspace(KERNEL_SCHEMA, str(root), str(_db_path(root)), True)
@@ -440,26 +467,108 @@ def daemon_status(root_path: Path) -> KernelDaemonStatus:
         )
     with _connect(root) as db:
         rows = db.execute("select state, count(*) from tasks group by state order by state").fetchall()
+        daemon_row = db.execute("select status from daemon_leases order by last_heartbeat desc, daemon_id desc limit 1").fetchone()
     counts = {row[0]: int(row[1]) for row in rows}
+    daemon_running = daemon_row is not None and daemon_row[0] == "RUNNING"
     audit_valid = verify_audit_chain(root)
     health = "HEALTHY" if audit_valid else "DEGRADED"
     return KernelDaemonStatus(
         "tstack-kernel-daemon-status/v1",
         str(root),
         True,
-        False,
+        daemon_running,
         "sqlite-local-control",
         counts,
         counts.get("QUEUED", 0),
         audit_valid,
         health,
-        ("no background daemon process yet", "no worker pool yet", "status is read from SQLite workspace state"),
+        ("foreground daemon mode only", "status is read from SQLite workspace state", "process liveness is heartbeat-based"),
     )
 
 
 def start_daemon_foundation(root_path: Path) -> KernelDaemonStatus:
     init_workspace(root_path)
     return daemon_status(root_path)
+
+
+def _daemon_heartbeat(root: Path, daemon_id: str, pid: int, *, status: str) -> int:
+    now = _now()
+    with _connect(root) as db:
+        row = db.execute("select heartbeat_count from daemon_leases where daemon_id = ?", (daemon_id,)).fetchone()
+        if row is None:
+            db.execute(
+                "insert into daemon_leases(daemon_id, pid, status, started_at, last_heartbeat, heartbeat_count) values (?, ?, ?, ?, ?, ?)",
+                (daemon_id, pid, status, now, now, 1),
+            )
+            return 1
+        count = int(row[0]) + 1
+        db.execute(
+            "update daemon_leases set pid = ?, status = ?, last_heartbeat = ?, heartbeat_count = ? where daemon_id = ?",
+            (pid, status, now, count, daemon_id),
+        )
+        return count
+
+
+def _daemon_stop(root: Path, daemon_id: str, pid: int, *, reason: str) -> int:
+    now = _now()
+    with _connect(root) as db:
+        row = db.execute("select heartbeat_count from daemon_leases where daemon_id = ?", (daemon_id,)).fetchone()
+        count = int(row[0]) if row else 0
+        db.execute(
+            "insert or replace into daemon_leases(daemon_id, pid, status, started_at, last_heartbeat, shutdown_at, heartbeat_count) values (?, ?, ?, coalesce((select started_at from daemon_leases where daemon_id = ?), ?), ?, ?, ?)",
+            (daemon_id, pid, "STOPPED", daemon_id, now, now, now, count),
+        )
+        return count
+
+
+def run_daemon(root_path: Path, *, daemon_id: str | None = None, cycles: int | None = None, interval_seconds: float = 1.0, worker_limit: int = 1, recovery_policy: str = "fail") -> KernelDaemonRun:
+    if cycles is not None and cycles <= 0:
+        raise ValueError("daemon cycles must be positive")
+    if interval_seconds < 0 or interval_seconds > 60:
+        raise ValueError("daemon interval must be between 0 and 60 seconds")
+    if worker_limit <= 0 or worker_limit > 1000:
+        raise ValueError("daemon worker limit must be between 1 and 1000")
+    if recovery_policy not in {"fail", "requeue"}:
+        raise ValueError("recovery policy must be fail or requeue")
+    root = root_path.expanduser().resolve()
+    init_workspace(root)
+    pid = os.getpid()
+    daemon = daemon_id or "DAEMON-" + _sha(f"{root}:{pid}:{time.perf_counter()}")[:16]
+    recovered = recover_stuck_tasks(root, policy=recovery_policy)
+    completed_cycles = 0
+    heartbeats = 0
+    processed = succeeded = failed = 0
+    shutdown_reason = "cycle limit reached" if cycles is not None else "graceful shutdown requested"
+    try:
+        while cycles is None or completed_cycles < cycles:
+            heartbeats = _daemon_heartbeat(root, daemon, pid, status="RUNNING")
+            run = run_worker_pool(root, workers=1, limit=worker_limit)
+            processed += run.tasks_attempted
+            succeeded += run.succeeded
+            failed += run.failed
+            completed_cycles += 1
+            if cycles is not None and completed_cycles >= cycles:
+                break
+            time.sleep(interval_seconds)
+    except KeyboardInterrupt:
+        shutdown_reason = "keyboard interrupt"
+    finally:
+        heartbeats = _daemon_stop(root, daemon, pid, reason=shutdown_reason)
+    return KernelDaemonRun(
+        "tstack-kernel-daemon-run/v1",
+        str(root),
+        daemon,
+        pid,
+        "STOPPED",
+        completed_cycles,
+        heartbeats,
+        recovered.recovered,
+        processed,
+        succeeded,
+        failed,
+        shutdown_reason,
+        verify_audit_chain(root),
+    )
 
 
 def recover_stuck_tasks(root_path: Path, *, policy: str = "fail") -> KernelRecoveryResult:
@@ -711,7 +820,7 @@ def verify_audit_chain(root_path: Path) -> bool:
 def export_workspace_state(root_path: Path) -> KernelStateBundle:
     root = root_path.expanduser().resolve()
     tables: dict[str, list[dict]] = {}
-    table_names = ("tasks", "approvals", "approval_revocations", "audit_records", "snapshots", "events")
+    table_names = ("tasks", "approvals", "approval_revocations", "audit_records", "snapshots", "events", "daemon_leases")
     with _connect(root) as db:
         db.row_factory = sqlite3.Row
         for table in table_names:
@@ -761,7 +870,7 @@ def import_workspace_state(root_path: Path, bundle_path: Path) -> KernelWorkspac
         raise ValueError("kernel state bundle must not include approval key material")
     tables = bundle.get("tables", {})
     with _connect(root_path.expanduser().resolve()) as db:
-        for table in ("events", "snapshots", "audit_records", "approval_revocations", "approvals", "tasks"):
+        for table in ("daemon_leases", "events", "snapshots", "audit_records", "approval_revocations", "approvals", "tasks"):
             db.execute(f"delete from {table}")
         for row in tables.get("tasks", []):
             db.execute(
@@ -792,6 +901,11 @@ def import_workspace_state(root_path: Path, bundle_path: Path) -> KernelWorkspac
             db.execute(
                 "insert into events(event_id, task_id, event_type, state, message, created_at) values (?, ?, ?, ?, ?, ?)",
                 (row["event_id"], row["task_id"], row["event_type"], row["state"], row["message"], row["created_at"]),
+            )
+        for row in tables.get("daemon_leases", []):
+            db.execute(
+                "insert into daemon_leases(daemon_id, pid, status, started_at, last_heartbeat, shutdown_at, heartbeat_count) values (?, ?, ?, ?, ?, ?, ?)",
+                (row["daemon_id"], row["pid"], row["status"], row["started_at"], row["last_heartbeat"], row["shutdown_at"], row["heartbeat_count"]),
             )
     return workspace
 

@@ -11,6 +11,8 @@ tstack workspace import state-bundle.json --workspace restored-workspace
 tstack daemon start
 tstack daemon status
 tstack daemon recover --policy fail
+tstack daemon run --cycles 1 --interval-seconds 0
+tstackd --workspace . --cycles 1 --interval-seconds 0
 tstack task submit --target note.txt --content "hello"
 tstack kernel-approval approve TASK_ID --actor Mosin
 tstack kernel-approval revoke APPROVAL_ID --actor Mosin --reason "No longer approved"
@@ -30,6 +32,7 @@ tstack kernel-rollback apply TASK_ID
 
 - SQLite workspace state at `.tstack/state.db`
 - Local daemon status foundation from SQLite state
+- Foreground daemon loop with SQLite lease and heartbeat records
 - Portable workspace state export/import without approval key material
 - Workspace-local approval signing key at `.tstack/approval.key`
 - Deterministic task IDs
@@ -39,7 +42,7 @@ tstack kernel-rollback apply TASK_ID
 - Cancellation for non-terminal tasks
 - Failed or blocked task retry back to approval review
 - Timeout failure path
-- Restart recovery for stale `RUNNING` tasks with `fail` or `requeue` policy
+- Restart recovery for stale `RUNNING` tasks with `fail` or `requeue` policy, invoked by daemon startup
 - Same-process bounded worker pool simulation over queued tasks
 - Machine-readable local kernel benchmark
 - Signed approval records
@@ -53,9 +56,9 @@ tstack kernel-rollback apply TASK_ID
 
 ## Current Limits
 
-- No background daemon process yet
+- No installed OS background service yet
+- Daemon mode is foreground and cooperative; process supervision belongs to the host for now
 - Worker command is same-process simulation, not distributed execution
-- Recovery is explicit via `tstack daemon recover`; it is not automatic until a daemon loop exists
 - Only `filesystem.write` is executable in this vertical slice
 - Signing is workspace-local HMAC, not asymmetric public-key approval
 - Imported approvals cannot be verified with the original key unless key custody is separately handled; the export intentionally excludes key material
