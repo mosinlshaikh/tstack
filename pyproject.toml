@@ -27,6 +27,7 @@ dev = ["pytest>=8.0"]
 [project.scripts]
 tstack = "tstack.cli:main"
 tstackd = "tstack.daemon_cli:main"
+tstack-sandbox = "tstack.sandbox_cli:main"
 tstack-secure = "tstack.secure_cli:main"
 tstack-evidence = "tstack.evidence_cli:main"
 tstack-learn = "tstack.learning_cli:main"
