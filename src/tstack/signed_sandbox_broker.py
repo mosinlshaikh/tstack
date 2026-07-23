@@ -7,7 +7,7 @@ This module connects four previously separate boundaries:
 3. an exact Ed25519-signed single-use approval, and
 4. the rootless Docker sandbox runtime.
 
-The approval is consumed before Docker is invoked.  The action parameters bind
+The approval is consumed before Docker is invoked. The action parameters bind
 the complete sandbox request, including image, command, workspace, profile,
 environment, artifact paths, and sandbox request hash.
 """
@@ -19,20 +19,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from tstack.capability_broker import (
-    BROKER_SCHEMA,
-    BrokerReceipt,
-    CapabilityBroker,
-    CapabilityDefinition,
-)
-from tstack.container_sandbox import (
-    SandboxReceipt,
-    SandboxRequest,
-    create_sandbox_request,
-    execute_sandbox,
-)
+from tstack.capability_broker import BrokerReceipt, CapabilityBroker, CapabilityDefinition
+from tstack.container_sandbox import SandboxReceipt, SandboxRequest, create_sandbox_request, execute_sandbox
 from tstack.execution_journal import append_execution_event
-from tstack.runtime_auth import ActionRequest, SignedApproval, verify_signed_approval
+from tstack.runtime_auth import ActionRequest, verify_signed_approval
 from tstack.runtime_store import consume_approval
 from tstack.task_runtime import TaskRecord
 
@@ -56,11 +46,16 @@ def _load(path: Path) -> dict[str, Any]:
 
 
 def sandbox_parameters(request: SandboxRequest) -> dict[str, Any]:
-    """Return the exact canonical parameters that must be approved."""
-    return {
+    """Return JSON-canonical parameters that survive task-store persistence.
+
+    ``submit_task`` normalizes values through JSON, converting tuples to lists.
+    Canonicalizing here prevents false mismatches while preserving exact hashes.
+    """
+    payload = {
         "sandbox": asdict(request),
         "sandbox_request_hash": request.request_hash,
     }
+    return json.loads(json.dumps(payload, sort_keys=True))
 
 
 def _validate_task_binding(task: TaskRecord, request: ActionRequest, sandbox: SandboxRequest) -> None:
@@ -88,11 +83,6 @@ def build_signed_sandbox_broker(
     audit_journal: Path,
     executor: SandboxExecutor = execute_sandbox,
 ) -> CapabilityBroker:
-    """Build a single-purpose broker whose docker.run adapter is fully bound.
-
-    The returned broker allows only the exact supplied task.  Reusing it with a
-    different task, workspace, command, image, profile, or request is rejected.
-    """
     request_payload = _load(request_path)
     approval_payload = _load(approval_path)
     approval = verify_signed_approval(request_payload, approval_payload, public_key_raw)
@@ -188,7 +178,6 @@ def execute_signed_sandbox_workflow(
     audit_journal: Path,
     executor: SandboxExecutor = execute_sandbox,
 ) -> SignedSandboxWorkflowReceipt:
-    """Execute one end-to-end task → broker → approval → sandbox workflow."""
     broker = build_signed_sandbox_broker(
         task=task,
         sandbox=sandbox,
@@ -222,7 +211,6 @@ def create_workflow_sandbox_request(
     environment: Mapping[str, str] | None = None,
     artifact_paths: tuple[str, ...] = (),
 ) -> SandboxRequest:
-    """Convenience wrapper retained as the canonical workflow request builder."""
     return create_sandbox_request(
         image=image,
         command=command,
