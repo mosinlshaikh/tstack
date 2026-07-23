@@ -7,6 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from tstack.capability_broker import bootstrap_broker
 from tstack.runtime_daemon import DaemonConfig, RuntimeDaemon, read_daemon_status, request_daemon_stop
 from tstack.task_runtime import list_tasks, request_cancellation, submit_task, task_json
 
@@ -19,19 +20,6 @@ def _json_object(value: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise argparse.ArgumentTypeError("parameters must be a JSON object")
     return payload
-
-
-def _bootstrap_dispatch(task) -> dict[str, Any]:
-    """Minimal safe dispatcher used until Capability Broker v1 is connected.
-
-    Only the internal `runtime.noop` capability is accepted. Operational
-    capabilities are denied rather than executed directly by the daemon.
-    """
-    if task.capability != "runtime.noop":
-        raise PermissionError(
-            f"capability {task.capability!r} requires Capability Broker integration"
-        )
-    return {"acknowledged": True, "parameters": task.parameters}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("status", help="Read the durable daemon status record")
     sub.add_parser("stop", help="Request graceful daemon shutdown")
+    sub.add_parser("capabilities", help="List broker-registered capabilities")
 
     submit = sub.add_parser("submit", help="Submit a persistent logical task")
     submit.add_argument("capability")
@@ -71,6 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     database = Path(args.database)
     state_dir = Path(args.state_dir)
+    broker = bootstrap_broker()
 
     if args.command == "run":
         daemon = RuntimeDaemon(
@@ -83,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
                 heartbeat_interval_seconds=args.heartbeat,
                 idle_exit_seconds=args.idle_exit,
             ),
-            _bootstrap_dispatch,
+            lambda task: asdict(broker.dispatch(task)),
         )
         print(json.dumps(asdict(daemon.run()), indent=2, sort_keys=True))
         return 0
@@ -99,6 +89,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "stop":
         print(request_daemon_stop(state_dir))
+        return 0
+
+    if args.command == "capabilities":
+        print(json.dumps([asdict(item) for item in broker.definitions()], indent=2, sort_keys=True))
         return 0
 
     if args.command == "submit":
